@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>skt-morph | Sanskrit Engine</title>
-    <!-- Using UNPKG which is generally more reliable across firewalls -->
-    <script src="https://unpkg.com/@indic-transliteration/sanscript@1.2.2/sanscript.min.js"></script>
     <style>
         body { font-family: system-ui, -apple-system, sans-serif; background-color: #121212; color: #ffffff; max-width: 900px; margin: 0 auto; padding: 2rem; }
         h1 { color: #f59e0b; text-align: center; }
@@ -49,6 +47,18 @@
     <button id="jsonBtn" class="toggle-json" style="display: none;">Show Raw JSON</button>
     <pre id="rawJson"></pre>
 
+    <!-- Embedded Minimal Sanscript Engine -->
+    <script>
+        var Sanscript=function(){var l={};l.options={skip_sgml:!1,syncope:!1};l.schemes={
+            devanagari:{vowels:["अ","आ","इ","ई","उ","ऊ","ऋ","ॠ","ऌ","ॡ","ए","ऐ","ओ","औ"],vowel_marks:["ा","ि","ी","ु","ू","ृ","ॄ","ॢ","ॣ","े","ै","ो","ौ"],other_marks:["ं","ः","ँ"],virama:["्"],consonants:["क","ख","ग","घ","ङ","च","छ","ज","झ","ञ","ट","ठ","ड","ढ","ण","त","थ","द","ध","न","प","फ","ब","भ","म","य","र","ल","व","श","ष","स","ह"],symbols:["०","१","२","३","४","५","६","७","८","९","ॐ","ऽ","।","॥","zwj","zwnj"],candra:["ॅ"],marks:["ऽ"]},
+            slp1:{vowels:["a","A","i","I","u","U","f","F","x","X","e","E","o","O"],vowel_marks:["A","i","I","u","U","f","F","x","X","e","E","o","O"],other_marks:["M","H","~"],virama:[""],consonants:["k","K","g","G","N","c","C","j","J","Y","w","W","q","Q","R","t","T","d","D","n","p","P","b","B","m","y","r","l","v","S","z","s","h"],symbols:["0","1","2","3","4","5","6","7","8","9","oM","'","|","||","zwj","zwnj"],candra:["~"],marks:["'"]},
+            iast:{vowels:["a","ā","i","ī","u","ū","ṛ","ṝ","ḷ","ḹ","e","ai","o","au"],vowel_marks:["ā","i","ī","u","ū","ṛ","ṝ","ḷ","ḹ","e","ai","o","au"],other_marks:["ṃ","ḥ","m̐"],virama:[""],consonants:["k","kh","g","gh","ṅ","c","ch","j","jh","ñ","ṭ","ṭh","ḍ","ḍh","ṇ","t","th","d","dh","n","p","ph","b","bh","m","y","r","l","v","ś","ṣ","s","h"],symbols:["0","1","2","3","4","5","6","7","8","9","oṃ","'","|","||","zwj","zwnj"],candra:["m̐"],marks:["'"]}
+        };
+        function g(t,n){for(var e={},r=0;r<t.length;r++)e[t[r]]=n[r];return e}
+        l.t=function(t,n,e,r){n=l.schemes[n];e=l.schemes[e];if(!n||!e)return t;var s=g(n.consonants,e.consonants),o=g(n.vowels,e.vowels),a=g(n.vowel_marks,e.vowel_marks),i=g(n.other_marks,e.other_marks),u=g(n.symbols,e.symbols),c=g(n.candra,e.candra),h=g(n.marks,e.marks),m=n.virama[0],f=e.virama[0];let d="",v=!1;for(let p=0;p<t.length;p++){let k=t[p],b=t[p+1]||"";if(s[k])d+=s[k],v=!0;else if(a[k])d+=a[k],v=!1;else if(k===m)d+=f,v=!1;else if(o[k])v&&f&&(d+=f),d+=o[k],v=!1;else if(i[k]||u[k]||c[k]||h[k])d+=i[k]||u[k]||c[k]||h[k];else{v&&f&&(d+=f),d+=k,v=!1;}}return v&&f&&(d+=f),d};
+        return l}();
+    </script>
+
     <script>
         const input = document.getElementById('wordInput');
         const btn = document.getElementById('searchBtn');
@@ -57,24 +67,20 @@
         const jsonBtn = document.getElementById('jsonBtn');
         const outputScript = document.getElementById('outputScript');
 
-        // Graceful fallback if the Sanscript library fails to load
+        // Detects input script and normalizes to SLP1 for the backend
         function normalizeToSLP1(word) {
-            if (typeof Sanscript === 'undefined') {
-                console.warn("Sanscript library failed to load. Assuming SLP1 input.");
-                return word;
-            }
             if (/[\u0900-\u097F]/.test(word)) return Sanscript.t(word, 'devanagari', 'slp1');
             if (/[āīūṛṝḷḹēōāiīuūeoṃḥśṣṭḍṇñṅ]/.test(word.toLowerCase())) return Sanscript.t(word, 'iast', 'slp1');
-            return word;
+            return word; // Assume SLP1
         }
 
+        // Translates output SLP1 to User's desired script
         function renderText(slp1Text) {
             if (!slp1Text || slp1Text === '-') return '-';
             const target = outputScript.value;
+            if (target === 'slp1') return slp1Text;
             
-            // If library failed or target is SLP1, just return the raw text
-            if (typeof Sanscript === 'undefined' || target === 'slp1') return slp1Text;
-            
+            // We split by spaces/symbols to avoid translating grammatical tags like "masculine"
             return slp1Text.split(' ').map(word => {
                 if (['masc', 'fem', 'neut', 'eka', 'dvi', 'bahu', 'prathama', 'dvitiya', 'tritiya', 'caturthi', 'panchami', 'sasthi', 'saptami', 'sambodhana', 'law', 'low', 'law', 'kartari', 'karmani', 'parasmEpadam', 'Atmanepadam'].includes(word.toLowerCase())) {
                     return word; 
