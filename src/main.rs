@@ -42,7 +42,6 @@ async fn analyze_word(
     Path(word): Path<String>,
     State(state): State<Arc<AppState>>,
 ) -> Json<Value> {
-    // Call our new Rust analyzer engine!
     let results = engine::analyzer::analyze(&word, &state.pool).await;
     Json(results)
 }

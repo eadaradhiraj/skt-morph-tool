@@ -14,7 +14,6 @@
         input { width: 100%; max-width: 400px; padding: 12px; font-size: 1.2rem; border-radius: 8px; border: 1px solid #333; background: #1e1e1e; color: white; }
         button { padding: 12px 24px; font-size: 1.2rem; border-radius: 8px; border: none; background: #f59e0b; color: #121212; font-weight: bold; cursor: pointer; transition: 0.2s; }
         button:hover { background: #d97706; }
-        
         .category-title { color: #f59e0b; border-bottom: 1px solid #333; padding-bottom: 0.5rem; margin-top: 2rem; }
         table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: #1e1e1e; border-radius: 8px; overflow: hidden; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #333; font-size: 1.1rem; }
@@ -47,47 +46,74 @@
     <button id="jsonBtn" class="toggle-json" style="display: none;">Show Raw JSON</button>
     <pre id="rawJson"></pre>
 
-    <!-- Embedded Minimal Sanscript Engine -->
     <script>
-        var Sanscript=function(){var l={};l.options={skip_sgml:!1,syncope:!1};l.schemes={
-            devanagari:{vowels:["अ","आ","इ","ई","उ","ऊ","ऋ","ॠ","ऌ","ॡ","ए","ऐ","ओ","औ"],vowel_marks:["ा","ि","ी","ु","ू","ृ","ॄ","ॢ","ॣ","े","ै","ो","ौ"],other_marks:["ं","ः","ँ"],virama:["्"],consonants:["क","ख","ग","घ","ङ","च","छ","ज","झ","ञ","ट","ठ","ड","ढ","ण","त","थ","द","ध","न","प","फ","ब","भ","म","य","र","ल","व","श","ष","स","ह"],symbols:["०","१","२","३","४","५","६","७","८","९","ॐ","ऽ","।","॥","zwj","zwnj"],candra:["ॅ"],marks:["ऽ"]},
-            slp1:{vowels:["a","A","i","I","u","U","f","F","x","X","e","E","o","O"],vowel_marks:["A","i","I","u","U","f","F","x","X","e","E","o","O"],other_marks:["M","H","~"],virama:[""],consonants:["k","K","g","G","N","c","C","j","J","Y","w","W","q","Q","R","t","T","d","D","n","p","P","b","B","m","y","r","l","v","S","z","s","h"],symbols:["0","1","2","3","4","5","6","7","8","9","oM","'","|","||","zwj","zwnj"],candra:["~"],marks:["'"]},
-            iast:{vowels:["a","ā","i","ī","u","ū","ṛ","ṝ","ḷ","ḹ","e","ai","o","au"],vowel_marks:["ā","i","ī","u","ū","ṛ","ṝ","ḷ","ḹ","e","ai","o","au"],other_marks:["ṃ","ḥ","m̐"],virama:[""],consonants:["k","kh","g","gh","ṅ","c","ch","j","jh","ñ","ṭ","ṭh","ḍ","ḍh","ṇ","t","th","d","dh","n","p","ph","b","bh","m","y","r","l","v","ś","ṣ","s","h"],symbols:["0","1","2","3","4","5","6","7","8","9","oṃ","'","|","||","zwj","zwnj"],candra:["m̐"],marks:["'"]}
-        };
-        function g(t,n){for(var e={},r=0;r<t.length;r++)e[t[r]]=n[r];return e}
-        l.t=function(t,n,e,r){n=l.schemes[n];e=l.schemes[e];if(!n||!e)return t;var s=g(n.consonants,e.consonants),o=g(n.vowels,e.vowels),a=g(n.vowel_marks,e.vowel_marks),i=g(n.other_marks,e.other_marks),u=g(n.symbols,e.symbols),c=g(n.candra,e.candra),h=g(n.marks,e.marks),m=n.virama[0],f=e.virama[0];let d="",v=!1;for(let p=0;p<t.length;p++){let k=t[p],b=t[p+1]||"";if(s[k])d+=s[k],v=!0;else if(a[k])d+=a[k],v=!1;else if(k===m)d+=f,v=!1;else if(o[k])v&&f&&(d+=f),d+=o[k],v=!1;else if(i[k]||u[k]||c[k]||h[k])d+=i[k]||u[k]||c[k]||h[k];else{v&&f&&(d+=f),d+=k,v=!1;}}return v&&f&&(d+=f),d};
-        return l}();
-    </script>
+        // Custom Self-Contained Transliteration Engine
+        const SLP_TO_DEVA_VOWELS = {'a':'अ', 'A':'आ', 'i':'इ', 'I':'ई', 'u':'उ', 'U':'ऊ', 'f':'ऋ', 'F':'ॠ', 'x':'ऌ', 'X':'ॡ', 'e':'ए', 'E':'ऐ', 'o':'ओ', 'O':'औ'};
+        const SLP_TO_DEVA_MATRAS = {'a':'', 'A':'ा', 'i':'ि', 'I':'ी', 'u':'ु', 'U':'ू', 'f':'ृ', 'F':'ॄ', 'x':'ॢ', 'X':'ॣ', 'e':'े', 'E':'ै', 'o':'ो', 'O':'ौ'};
+        const SLP_TO_DEVA_CONS = {'k':'क', 'K':'ख', 'g':'ग', 'G':'घ', 'N':'ङ', 'c':'च', 'C':'छ', 'j':'ज', 'J':'झ', 'Y':'ञ', 'w':'ट', 'W':'ठ', 'q':'ड', 'Q':'ढ', 'R':'ण', 't':'त', 'T':'थ', 'd':'द', 'D':'ध', 'n':'न', 'p':'प', 'P':'फ', 'b':'ब', 'B':'भ', 'm':'म', 'y':'य', 'r':'र', 'l':'ल', 'v':'व', 'S':'श', 'z':'ष', 's':'स', 'h':'ह'};
+        const SLP_TO_DEVA_EXTRA = {'M':'ं', 'H':'ः', '~':'ँ'};
 
-    <script>
+        const SLP_TO_IAST = {'A':'ā', 'I':'ī', 'U':'ū', 'f':'ṛ', 'F':'ṝ', 'x':'ḷ', 'X':'ḹ', 'E':'ai', 'O':'au', 'K':'kh', 'g':'g', 'G':'gh', 'N':'ṅ', 'c':'c', 'C':'ch', 'j':'j', 'J':'jh', 'Y':'ñ', 'w':'ṭ', 'W':'ṭh', 'q':'ḍ', 'Q':'ḍh', 'R':'ṇ', 't':'t', 'T':'th', 'd':'d', 'D':'dh', 'n':'n', 'p':'p', 'P':'ph', 'b':'b', 'B':'bh', 'm':'m', 'y':'y', 'r':'r', 'l':'l', 'v':'v', 'S':'ś', 'z':'ṣ', 's':'s', 'h':'h', 'M':'ṃ', 'H':'ḥ', '~':'m̐'};
+
+        function isVowel(c) { return SLP_TO_DEVA_VOWELS[c] !== undefined; }
+        function isConsonant(c) { return SLP_TO_DEVA_CONS[c] !== undefined; }
+
+        function slp1ToDevanagari(text) {
+            let res = "";
+            let i = 0;
+            while (i < text.length) {
+                let c = text[i];
+                if (isVowel(c)) {
+                    // If it's the first char, or the previous char wasn't a consonant
+                    if (i === 0 || !isConsonant(text[i-1])) res += SLP_TO_DEVA_VOWELS[c];
+                    else res += SLP_TO_DEVA_MATRAS[c];
+                } else if (isConsonant(c)) {
+                    res += SLP_TO_DEVA_CONS[c];
+                    // If the next char is not a vowel, add a virama (unless it's the end of string)
+                    if (i === text.length - 1 || (!isVowel(text[i+1]) && !SLP_TO_DEVA_EXTRA[text[i+1]])) res += "्";
+                } else if (SLP_TO_DEVA_EXTRA[c]) {
+                    res += SLP_TO_DEVA_EXTRA[c];
+                } else {
+                    res += c;
+                }
+                i++;
+            }
+            return res;
+        }
+
+        function slp1ToIast(text) {
+            let res = "";
+            for (let char of text) {
+                if (SLP_TO_IAST[char]) res += SLP_TO_IAST[char];
+                else res += char.toLowerCase();
+            }
+            return res;
+        }
+
+        function renderText(slp1Text, column) {
+            if (!slp1Text || slp1Text === '-') return '-';
+            const target = outputScript.value;
+            if (target === 'slp1') return slp1Text;
+            
+            // Protect structural data and English labels
+            if (['Dhatu ID', 'Meaning Hint'].includes(column)) return slp1Text;
+            const rawTags = ['masc', 'fem', 'neut', 'eka', 'dvi', 'bahu', 'masc/fem', 'masc/neut', 'masc/fem/neut', 'any'];
+            if (rawTags.includes(slp1Text.toLowerCase())) return slp1Text;
+
+            // Simple split processing
+            return slp1Text.split(' ').map(word => {
+                if (target === 'devanagari') return slp1ToDevanagari(word);
+                if (target === 'iast') return slp1ToIast(word);
+                return word;
+            }).join(' ');
+        }
+
         const input = document.getElementById('wordInput');
         const btn = document.getElementById('searchBtn');
         const container = document.getElementById('resultsContainer');
         const rawJson = document.getElementById('rawJson');
         const jsonBtn = document.getElementById('jsonBtn');
         const outputScript = document.getElementById('outputScript');
-
-        // Detects input script and normalizes to SLP1 for the backend
-        function normalizeToSLP1(word) {
-            if (/[\u0900-\u097F]/.test(word)) return Sanscript.t(word, 'devanagari', 'slp1');
-            if (/[āīūṛṝḷḹēōāiīuūeoṃḥśṣṭḍṇñṅ]/.test(word.toLowerCase())) return Sanscript.t(word, 'iast', 'slp1');
-            return word; // Assume SLP1
-        }
-
-        // Translates output SLP1 to User's desired script
-        function renderText(slp1Text) {
-            if (!slp1Text || slp1Text === '-') return '-';
-            const target = outputScript.value;
-            if (target === 'slp1') return slp1Text;
-            
-            // We split by spaces/symbols to avoid translating grammatical tags like "masculine"
-            return slp1Text.split(' ').map(word => {
-                if (['masc', 'fem', 'neut', 'eka', 'dvi', 'bahu', 'prathama', 'dvitiya', 'tritiya', 'caturthi', 'panchami', 'sasthi', 'saptami', 'sambodhana', 'law', 'low', 'law', 'kartari', 'karmani', 'parasmEpadam', 'Atmanepadam'].includes(word.toLowerCase())) {
-                    return word; 
-                }
-                return Sanscript.t(word, 'slp1', target);
-            }).join(' ');
-        }
 
         function createTable(title, columns, dataRows) {
             if (!dataRows || dataRows.length === 0) return '';
@@ -99,7 +125,7 @@
                 columns.forEach(c => {
                     const key = c.toLowerCase().replace(' ', '_');
                     const val = row[key] || '-';
-                    html += `<td>${renderText(val)}</td>`;
+                    html += `<td>${renderText(val, c)}</td>`;
                 });
                 html += `</tr>`;
             });
@@ -111,7 +137,8 @@
             const rawWord = input.value.trim();
             if (!rawWord) return;
             
-            const slp1Word = normalizeToSLP1(rawWord);
+            // For now, require SLP1 input while we test the output engine
+            const slp1Word = rawWord; 
             
             container.innerHTML = "<p style='text-align:center;'>Querying Database...</p>";
             document.body.classList.add('loading');
