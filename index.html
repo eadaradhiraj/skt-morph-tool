@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>skt-morph | Sanskrit Engine</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background-color: #121212; color: #ffffff; max-width: 800px; margin: 0 auto; padding: 2rem; }
+        h1 { color: #f59e0b; }
+        .search-box { display: flex; gap: 10px; margin-bottom: 2rem; }
+        input { flex: 1; padding: 12px; font-size: 1.2rem; border-radius: 8px; border: 1px solid #333; background: #1e1e1e; color: white; }
+        button { padding: 12px 24px; font-size: 1.2rem; border-radius: 8px; border: none; background: #f59e0b; color: #121212; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #d97706; }
+        pre { background: #1e1e1e; padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 1rem; color: #a7f3d0; border: 1px solid #333; }
+        .loading { opacity: 0.5; }
+    </style>
+</head>
+<body>
+    <h1>Sanskrit Morphological Engine</h1>
+    <p>Type a word in SLP1 transliteration (e.g., <i>prakaroti</i>, <i>gacCan</i>, <i>vAsudevam</i>)</p>
+    
+    <div class="search-box">
+        <input type="text" id="wordInput" placeholder="Enter word..." autocomplete="off" spellcheck="false" />
+        <button id="searchBtn">Analyze</button>
+    </div>
+
+    <pre id="resultBox">// Results will appear here...</pre>
+
+    <script>
+        const input = document.getElementById('wordInput');
+        const btn = document.getElementById('searchBtn');
+        const resultBox = document.getElementById('resultBox');
+
+        async function searchWord() {
+            const word = input.value.trim();
+            if (!word) return;
+            
+            resultBox.classList.add('loading');
+            resultBox.innerText = "Searching...";
+
+            try {
+                const response = await fetch(`/api/analyze/${word}`);
+                const data = await response.json();
+                resultBox.innerText = JSON.stringify(data, null, 2);
+            } catch (err) {
+                resultBox.innerText = `Error: ${err.message}`;
+            } finally {
+                resultBox.classList.remove('loading');
+            }
+        }
+
+        btn.addEventListener('click', searchWord);
+        input.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchWord(); });
+    </script>
+</body>
+</html>
