@@ -19,6 +19,9 @@ COPY --from=builder /app/target/release/skt-morph-tool /app/skt-morph-tool
 COPY data/skt_morphology.db /app/data/skt_morphology.db
 COPY index.html /app/index.html
 
+# CREATE data folder and DOWNLOAD the 543MB database directly from GitHub Releases!
+RUN mkdir -p data && wget -q -O data/skt_morphology.db https://github.com/eadaradhiraj/skt-morph-tool/releases/download/v1.0/skt_morphology.db
+
 # Expose port 8000 for the cloud provider
 EXPOSE 8000
 
