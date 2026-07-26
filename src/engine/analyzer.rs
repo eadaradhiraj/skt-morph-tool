@@ -8,8 +8,16 @@ use super::irregulars::analyze_irregular;
 use super::namadhatu::analyze_namadhatu;
 use super::taddhita::analyze_taddhita;
 
+// Strips Vedic pitch accents (svaras) from SLP1 strings so exact_match doesn't fail
+fn strip_accents(word: &str) -> String {
+    word.replace(&['/', '\\', '^'][..], "")
+}
+
 fn exact_match(row_val: &str, word: &str) -> bool {
-    row_val.split(',').map(|s| s.trim()).any(|s| s == word)
+    let clean_word = strip_accents(word);
+    row_val.split(',')
+        .map(|s| strip_accents(s.trim()))
+        .any(|s| s == clean_word)
 }
 
 fn is_valid_participle(conn: &rusqlite::Connection, dhatu_id: &str, upasarga: &str, pratyaya: &str) -> bool {
@@ -28,7 +36,9 @@ async fn fetch_verbs(word: String, pool: &Pool) -> Vec<Value> {
     let word_clone = word.clone();
     pool.get().await.unwrap().interact(move |conn| {
         let mut res = Vec::new();
-        let search_term = format!("%{}%", word_clone);
+        // Use LIKE with wildcards to catch accented versions in the SQL query too
+        let search_term = format!("%{}%", strip_accents(&word_clone).chars().map(|c| format!("{}%", c)).collect::<String>());
+        
         let mut stmt = conn.prepare("SELECT dhatu_id, upasarga, derivative, prayoga, lakara, voice, purusha, eka, dvi, bahu FROM conjugations WHERE eka LIKE ?1 OR dvi LIKE ?1 OR bahu LIKE ?1").unwrap();
         let mut rows = stmt.query([&search_term]).unwrap();
         while let Ok(Some(row)) = rows.next() {
@@ -71,7 +81,7 @@ async fn fetch_participles(word: String, pool: &Pool) -> Vec<Value> {
     let word_clone = word.clone();
     pool.get().await.unwrap().interact(move |conn| {
         let mut res = Vec::new();
-        let search_term = format!("%{}%", word_clone);
+        let search_term = format!("%{}%", strip_accents(&word_clone).chars().map(|c| format!("{}%", c)).collect::<String>());
         let mut stmt = conn.prepare("SELECT dhatu_id, upasarga, derivative, pratyaya, base_form, masculine, feminine, neuter FROM participles WHERE base_form LIKE ?1 OR masculine LIKE ?1 OR feminine LIKE ?1 OR neuter LIKE ?1").unwrap();
         let mut rows = stmt.query([&search_term]).unwrap();
         
@@ -200,7 +210,6 @@ pub async fn analyze(word: &str, pool: &Pool) -> Value {
     let irregulars = analyze_irregular(word, pool).await;
     let namadhatus = analyze_namadhatu(word);
     
-    // For Taddhitas, we run Reverse-Vriddhi on the root word AND any stripped stems
     let mut taddhitas = analyze_taddhita(word);
     for stem in get_stems(word) {
         let sub_taddhitas = analyze_taddhita(&stem.stem);
