@@ -1,11 +1,11 @@
 use deadpool_sqlite::Pool;
 use serde_json::{json, Value};
 
-const CASES: [&str; 7] = ["prathama", "dvitiya", "tritiya", "caturthi", "panchami", "sasthi", "saptami"];
+// const CASES: [&str; 7] = ["prathama", "dvitiya", "tritiya", "caturthi", "panchami", "sasthi", "saptami"];
 
 pub async fn analyze_pronoun(word: &str, pool: &Pool) -> Vec<Value> {
     let word_clone = word.to_string();
-    pool.get().await.unwrap().interact(move |conn| {
+    pool.get().await.unwrap().interact(move |_conn| {
         let mut results = Vec::new();
         // Look up all pronouns (we assume Pronouns were added to the DB alongside Irregulars and Numerals)
         // Note: For now we fall back to a hardcoded mapping since Pronouns didn't explicitly get their own DB table in the Python step yet.
