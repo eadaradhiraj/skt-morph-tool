@@ -2,6 +2,11 @@ use deadpool_sqlite::Pool;
 use serde_json::{json, Value};
 use super::sandhi::get_upasarga_splits;
 use super::stemmer::get_stems;
+use super::pronouns::analyze_pronoun;
+use super::numerals::analyze_numeral;
+use super::irregulars::analyze_irregular;
+use super::namadhatu::analyze_namadhatu;
+use super::taddhita::analyze_taddhita;
 
 fn exact_match(row_val: &str, word: &str) -> bool {
     row_val.split(',').map(|s| s.trim()).any(|s| s == word)
@@ -127,13 +132,10 @@ async fn analyze_participle(word: &str, pool: &Pool) -> Vec<Value> {
 // ================== DECLENSIONS (NOUNS) ==================
 async fn analyze_declension(word: &str, pool: &Pool) -> Vec<Value> {
     let guessed_stems = get_stems(word);
-    
-    // Package guesses to send into the blocking thread
     let guesses_json: Vec<Value> = guessed_stems.into_iter().map(|g| json!({"stem": g.stem, "gender": g.gender, "case": g.case, "vacana": g.vacana})).collect();
     
     pool.get().await.unwrap().interact(move |conn| {
         let mut results = Vec::new();
-        
         for guess in guesses_json {
             let stem = guess["stem"].as_str().unwrap();
             let search_term = format!("%{}%", stem);
@@ -145,26 +147,18 @@ async fn analyze_declension(word: &str, pool: &Pool) -> Vec<Value> {
             while let Ok(Some(row)) = rows.next() {
                 let base_form: String = row.get("base_form").unwrap_or_default();
                 if exact_match(&base_form, stem) {
-                    exact_matches.push(json!({
-                        "dhatu_id": row.get::<&str, String>("dhatu_id").unwrap_or_default(),
-                        "upasarga": row.get::<&str, String>("upasarga").unwrap_or_default(),
-                        "pratyaya": row.get::<&str, String>("pratyaya").unwrap_or_default()
-                    }));
+                    exact_matches.push(json!({"dhatu_id": row.get::<&str, String>("dhatu_id").unwrap_or_default(), "upasarga": row.get::<&str, String>("upasarga").unwrap_or_default(), "pratyaya": row.get::<&str, String>("pratyaya").unwrap_or_default()}));
                 }
             }
             
             if !exact_matches.is_empty() {
                 for m in exact_matches {
                     let mut r = guess.clone();
-                    r["type"] = json!("declension");
-                    r["base_form"] = json!(stem);
-                    r["dhatu_id"] = m["dhatu_id"].clone();
-                    r["upasarga"] = m["upasarga"].clone();
-                    r["pratyaya"] = m["pratyaya"].clone();
+                    r["type"] = json!("declension"); r["base_form"] = json!(stem);
+                    r["dhatu_id"] = m["dhatu_id"].clone(); r["upasarga"] = m["upasarga"].clone(); r["pratyaya"] = m["pratyaya"].clone();
                     results.push(r);
                 }
             } else {
-                // Dynamic Upasarga Stripping for Subantas
                 let mut found_dynamic = false;
                 for (upa, stripped_stem) in get_upasarga_splits(stem) {
                     let s_term = format!("%{}%", stripped_stem);
@@ -175,26 +169,20 @@ async fn analyze_declension(word: &str, pool: &Pool) -> Vec<Value> {
                         let base_form: String = row.get("base_form").unwrap_or_default();
                         if exact_match(&base_form, &stripped_stem) {
                             let mut r = guess.clone();
-                            r["type"] = json!("declension");
-                            r["base_form"] = json!(stem);
+                            r["type"] = json!("declension"); r["base_form"] = json!(stem);
                             r["dhatu_id"] = json!(row.get::<&str, String>("dhatu_id").unwrap_or_default());
                             r["upasarga"] = json!(upa.clone());
                             r["pratyaya"] = json!(row.get::<&str, String>("pratyaya").unwrap_or_default());
                             r["note"] = json!("Dynamic Upasarga Match");
-                            results.push(r);
-                            found_dynamic = true;
+                            results.push(r); found_dynamic = true;
                         }
                     }
                     if found_dynamic { break; }
                 }
-                
                 if !found_dynamic {
                     let mut r = guess.clone();
-                    r["type"] = json!("declension");
-                    r["base_form"] = json!(stem);
-                    r["dhatu_id"] = Value::Null;
-                    r["upasarga"] = Value::Null;
-                    r["pratyaya"] = Value::Null;
+                    r["type"] = json!("declension"); r["base_form"] = json!(stem);
+                    r["dhatu_id"] = Value::Null; r["upasarga"] = Value::Null; r["pratyaya"] = Value::Null;
                     results.push(r);
                 }
             }
@@ -207,11 +195,27 @@ pub async fn analyze(word: &str, pool: &Pool) -> Value {
     let verbs = analyze_verb(word, pool).await;
     let participles = analyze_participle(word, pool).await;
     let declensions = analyze_declension(word, pool).await;
+    let pronouns = analyze_pronoun(word, pool).await;
+    let numerals = analyze_numeral(word, pool).await;
+    let irregulars = analyze_irregular(word, pool).await;
+    let namadhatus = analyze_namadhatu(word);
+    
+    // For Taddhitas, we run Reverse-Vriddhi on the root word AND any stripped stems
+    let mut taddhitas = analyze_taddhita(word);
+    for stem in get_stems(word) {
+        let sub_taddhitas = analyze_taddhita(&stem.stem);
+        for st in sub_taddhitas { taddhitas.push(st); }
+    }
     
     json!({
         "searched_word": word,
         "verbs": verbs,
         "participles": participles,
         "declensions": declensions,
+        "pronouns": pronouns,
+        "numerals": numerals,
+        "irregulars": irregulars,
+        "namadhatus": namadhatus,
+        "taddhitas": taddhitas
     })
 }
