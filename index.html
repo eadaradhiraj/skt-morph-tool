@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>skt-morph | Sanskrit Engine</title>
-    <!-- Official Sanscript.js for flawless transliteration -->
-    <script src="https://cdn.jsdelivr.net/npm/@indic-transliteration/sanscript@1.2.2/sanscript.min.js"></script>
+    <!-- Using UNPKG which is generally more reliable across firewalls -->
+    <script src="https://unpkg.com/@indic-transliteration/sanscript@1.2.2/sanscript.min.js"></script>
     <style>
         body { font-family: system-ui, -apple-system, sans-serif; background-color: #121212; color: #ffffff; max-width: 900px; margin: 0 auto; padding: 2rem; }
         h1 { color: #f59e0b; text-align: center; }
@@ -57,24 +57,27 @@
         const jsonBtn = document.getElementById('jsonBtn');
         const outputScript = document.getElementById('outputScript');
 
-        // Detects input script and normalizes to SLP1 for the backend
+        // Graceful fallback if the Sanscript library fails to load
         function normalizeToSLP1(word) {
+            if (typeof Sanscript === 'undefined') {
+                console.warn("Sanscript library failed to load. Assuming SLP1 input.");
+                return word;
+            }
             if (/[\u0900-\u097F]/.test(word)) return Sanscript.t(word, 'devanagari', 'slp1');
             if (/[āīūṛṝḷḹēōāiīuūeoṃḥśṣṭḍṇñṅ]/.test(word.toLowerCase())) return Sanscript.t(word, 'iast', 'slp1');
-            return word; // Assume SLP1
+            return word;
         }
 
-        // Translates output SLP1 to User's desired script
         function renderText(slp1Text) {
             if (!slp1Text || slp1Text === '-') return '-';
             const target = outputScript.value;
-            if (target === 'slp1') return slp1Text;
             
-            // We split by spaces/symbols to avoid translating grammatical tags like "masculine"
-            // We assume pure uppercase/lowercase mixes are SLP1 Sanskrit words.
+            // If library failed or target is SLP1, just return the raw text
+            if (typeof Sanscript === 'undefined' || target === 'slp1') return slp1Text;
+            
             return slp1Text.split(' ').map(word => {
                 if (['masc', 'fem', 'neut', 'eka', 'dvi', 'bahu', 'prathama', 'dvitiya', 'tritiya', 'caturthi', 'panchami', 'sasthi', 'saptami', 'sambodhana', 'law', 'low', 'law', 'kartari', 'karmani', 'parasmEpadam', 'Atmanepadam'].includes(word.toLowerCase())) {
-                    return word; // Leave tags in English/SLP1
+                    return word; 
                 }
                 return Sanscript.t(word, 'slp1', target);
             }).join(' ');
