@@ -8,6 +8,7 @@ use axum::{
 use deadpool_sqlite::{Config, Pool, Runtime};
 use serde_json::Value;
 use std::sync::Arc;
+use std::env;
 
 mod engine;
 
@@ -29,8 +30,12 @@ async fn main() {
         .route("/api/analyze/:word", get(analyze_word))
         .with_state(app_state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await.unwrap();
-    println!("✅ Server running on http://127.0.0.1:8000");
+    // DYNAMIC PORT BINDING: Required for Render.com
+    let port = env::var("PORT").unwrap_or_else(|_| "8000".to_string());
+    let addr = format!("0.0.0.0:{}", port);
+
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+    println!("✅ Server running on http://{}", addr);
     axum::serve(listener, app).await.unwrap();
 }
 
