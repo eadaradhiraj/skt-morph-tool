@@ -5,52 +5,131 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>skt-morph | Sanskrit Engine</title>
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; background-color: #121212; color: #ffffff; max-width: 800px; margin: 0 auto; padding: 2rem; }
-        h1 { color: #f59e0b; }
-        .search-box { display: flex; gap: 10px; margin-bottom: 2rem; }
-        input { flex: 1; padding: 12px; font-size: 1.2rem; border-radius: 8px; border: 1px solid #333; background: #1e1e1e; color: white; }
+        body { font-family: system-ui, -apple-system, sans-serif; background-color: #121212; color: #ffffff; max-width: 900px; margin: 0 auto; padding: 2rem; }
+        h1 { color: #f59e0b; text-align: center; }
+        p.subtitle { text-align: center; color: #a1a1aa; margin-bottom: 2rem; }
+        .search-box { display: flex; gap: 10px; margin-bottom: 2rem; justify-content: center; }
+        input { width: 100%; max-width: 400px; padding: 12px; font-size: 1.2rem; border-radius: 8px; border: 1px solid #333; background: #1e1e1e; color: white; }
         button { padding: 12px 24px; font-size: 1.2rem; border-radius: 8px; border: none; background: #f59e0b; color: #121212; font-weight: bold; cursor: pointer; transition: 0.2s; }
         button:hover { background: #d97706; }
-        pre { background: #1e1e1e; padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 1rem; color: #a7f3d0; border: 1px solid #333; }
-        .loading { opacity: 0.5; }
+        
+        .category-title { color: #f59e0b; border-bottom: 1px solid #333; padding-bottom: 0.5rem; margin-top: 2rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: #1e1e1e; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
+        th { background: #27272a; color: #a1a1aa; font-weight: 600; }
+        tr:hover { background: #2a2a2a; }
+        .loading { opacity: 0.5; pointer-events: none; }
+        #rawJson { margin-top: 3rem; background: #1e1e1e; padding: 1rem; border-radius: 8px; font-size: 0.9rem; color: #6ee7b7; overflow-x: auto; display: none; }
+        .toggle-json { background: transparent; border: 1px solid #f59e0b; color: #f59e0b; margin-top: 1rem; }
     </style>
 </head>
 <body>
     <h1>Sanskrit Morphological Engine</h1>
-    <p>Type a word in SLP1 transliteration (e.g., <i>prakaroti</i>, <i>gacCan</i>, <i>vAsudevam</i>)</p>
+    <p class="subtitle">Type a word in Devanagari, IAST, or SLP1</p>
     
     <div class="search-box">
-        <input type="text" id="wordInput" placeholder="Enter word..." autocomplete="off" spellcheck="false" />
+        <input type="text" id="wordInput" placeholder="e.g. प्राकरोति, vyAkaroti, gacChan" autocomplete="off" spellcheck="false" />
         <button id="searchBtn">Analyze</button>
     </div>
 
-    <pre id="resultBox">// Results will appear here...</pre>
+    <div id="resultsContainer"></div>
+
+    <button id="jsonBtn" class="toggle-json" style="display: none;">Show Raw JSON</button>
+    <pre id="rawJson"></pre>
 
     <script>
+        // Simple Devanagari <-> SLP1 Transliterator 
+        // (A basic map for the most common phonemes to prove the concept)
+        const DEVA_TO_SLP = {
+            'अ':'a', 'आ':'A', 'इ':'i', 'ई':'I', 'उ':'u', 'ऊ':'U', 'ऋ':'f', 'ॠ':'F', 'ऌ':'x', 'ॡ':'X', 'ए':'e', 'ऐ':'E', 'ओ':'o', 'औ':'O',
+            'क':'k', 'ख':'K', 'ग':'g', 'घ':'G', 'ङ':'N',
+            'च':'c', 'छ':'C', 'ज':'j', 'झ':'J', 'ञ':'Y',
+            'ट':'w', 'ठ':'W', 'ड':'q', 'ढ':'Q', 'ण':'R',
+            'त':'t', 'थ':'T', 'द':'d', 'ध':'D', 'न':'n',
+            'प':'p', 'फ':'P', 'ब':'b', 'भ':'B', 'म':'m',
+            'य':'y', 'र':'r', 'ल':'l', 'व':'v',
+            'श':'S', 'ष':'z', 'स':'s', 'ह':'h',
+            'ं':'M', 'ः':'H', '्':''
+        };
+        const MATRAS = {'ा':'A', 'ि':'i', 'ी':'I', 'ु':'u', 'ू':'U', 'ृ':'f', 'ॄ':'F', 'ॢ':'x', 'ॣ':'X', 'े':'e', 'ै':'E', 'ो':'o', 'ौ':'O'};
+
+        function toSLP1(str) {
+            let res = '';
+            for (let i=0; i<str.length; i++) {
+                let char = str[i];
+                if (DEVA_TO_SLP[char]) {
+                    res += DEVA_TO_SLP[char];
+                    // If it's a consonant and the next char isn't a matra or virama, append 'a'
+                    if (char >= 'क' && char <= 'ह') {
+                        if (i+1 == str.length || (!MATRAS[str[i+1]] && str[i+1] !== '्')) res += 'a';
+                    }
+                } else if (MATRAS[char]) { res += MATRAS[char]; }
+                else { res += char; }
+            }
+            return res; // Fallback: if they typed english, we assume it's already SLP1 or IAST
+        }
+
         const input = document.getElementById('wordInput');
         const btn = document.getElementById('searchBtn');
-        const resultBox = document.getElementById('resultBox');
+        const container = document.getElementById('resultsContainer');
+        const rawJson = document.getElementById('rawJson');
+        const jsonBtn = document.getElementById('jsonBtn');
+
+        function createTable(title, columns, dataRows) {
+            if (!dataRows || dataRows.length === 0) return '';
+            let html = `<h2 class="category-title">${title}</h2><table><thead><tr>`;
+            columns.forEach(c => html += `<th>${c}</th>`);
+            html += `</tr></thead><tbody>`;
+            dataRows.forEach(row => {
+                html += `<tr>`;
+                columns.forEach(c => html += `<td>${row[c.toLowerCase().replace(' ', '_')] || '-'}</td>`);
+                html += `</tr>`;
+            });
+            html += `</tbody></table>`;
+            return html;
+        }
 
         async function searchWord() {
-            const word = input.value.trim();
-            if (!word) return;
+            const rawWord = input.value.trim();
+            if (!rawWord) return;
             
-            resultBox.classList.add('loading');
-            resultBox.innerText = "Searching...";
+            // Convert Devanagari to SLP1 before sending to API
+            const slp1Word = rawWord.match(/[\u0900-\u097F]/) ? toSLP1(rawWord) : rawWord;
+            
+            container.innerHTML = "<p style='text-align:center;'>Searching database...</p>";
+            document.body.classList.add('loading');
+            jsonBtn.style.display = 'none';
+            rawJson.style.display = 'none';
 
             try {
-                const response = await fetch(`/api/analyze/${word}`);
+                const response = await fetch(`/api/analyze/${slp1Word}`);
                 const data = await response.json();
-                resultBox.innerText = JSON.stringify(data, null, 2);
+                
+                let html = '';
+                html += createTable('Verbs (Tiṅanta)', ['Dhatu ID', 'Upasarga', 'Lakara', 'Purusha', 'Vacana', 'Voice'], data.verbs);
+                html += createTable('Declensions (Subanta)', ['Base Form', 'Dhatu ID', 'Upasarga', 'Pratyaya', 'Gender', 'Case', 'Vacana'], data.declensions);
+                html += createTable('Participles / Avyayas', ['Base Form', 'Pratyaya', 'Dhatu ID', 'Upasarga'], data.participles);
+                html += createTable('Taddhitas', ['Base Noun', 'Pratyaya', 'Meaning Hint'], data.taddhitas);
+                html += createTable('Namadhatus', ['Base Noun', 'Pratyaya', 'Meaning Hint'], data.namadhatus);
+                html += createTable('Pronouns', ['Base Form', 'Gender', 'Case', 'Vacana'], data.pronouns);
+                html += createTable('Numerals', ['Base Form', 'Gender', 'Case', 'Vacana'], data.numerals);
+                html += createTable('Irregular Nouns', ['Base Form', 'Gender', 'Case', 'Vacana'], data.irregulars);
+
+                container.innerHTML = html || "<p style='text-align:center; color: #ef4444;'>No morphological matches found in the database.</p>";
+                
+                rawJson.innerText = JSON.stringify(data, null, 2);
+                if(html) jsonBtn.style.display = 'block';
+
             } catch (err) {
-                resultBox.innerText = `Error: ${err.message}`;
+                container.innerHTML = `<p style='color: #ef4444; text-align:center;'>Error: ${err.message}</p>`;
             } finally {
-                resultBox.classList.remove('loading');
+                document.body.classList.remove('loading');
             }
         }
 
         btn.addEventListener('click', searchWord);
         input.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchWord(); });
+        jsonBtn.addEventListener('click', () => { rawJson.style.display = rawJson.style.display === 'none' ? 'block' : 'none'; });
     </script>
 </body>
 </html>
