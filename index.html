@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>skt-morph | Sanskrit Engine</title>
-    <!-- Pointing to the local Rust route instead of the internet! -->
-    <script src="/sanscript.js"></script>
     <style>
         body { font-family: system-ui, -apple-system, sans-serif; background-color: #121212; color: #ffffff; max-width: 900px; margin: 0 auto; padding: 2rem; }
         h1 { color: #f59e0b; text-align: center; margin-bottom: 0.5rem; }
@@ -29,7 +27,7 @@
 </head>
 <body>
     <h1>Sanskrit Morphological Engine</h1>
-    <p class="subtitle">Type a word in Devanagari, IAST, or SLP1</p>
+    <p class="subtitle">Powered by Rust & SQLite Edge</p>
 
     <div class="controls">
         <select id="inputScript">
@@ -41,12 +39,11 @@
         <select id="outputScript">
             <option value="devanagari">Output: Devanagari</option>
             <option value="iast">Output: IAST</option>
-            <option value="slp1">Output: SLP1</option>
         </select>
     </div>
     
     <div class="search-box">
-        <input type="text" id="wordInput" placeholder="e.g., प्राकरोति, vyAkaroti" autocomplete="off" spellcheck="false" />
+        <input type="text" id="wordInput" placeholder="e.g. प्राकरोति, vyAkaroti" autocomplete="off" spellcheck="false" />
         <button id="searchBtn">Analyze</button>
     </div>
 
@@ -56,45 +53,99 @@
     <pre id="rawJson"></pre>
 
     <script>
+        // --- CUSTOM, LIGHTWEIGHT, BULLETPROOF TRANSLITERATION ENGINE ---
+        const D_CONS = {'क':'k','ख':'K','ग':'g','घ':'G','ङ':'N','च':'c','छ':'C','ज':'j','झ':'J','ञ':'Y','ट':'w','ठ':'W','ड':'q','ढ':'Q','ण':'R','त':'t','थ':'T','द':'d','ध':'D','न':'n','प':'p','फ':'P','ब':'b','भ':'B','म':'m','य':'y','र':'r','ल':'l','व':'v','श':'S','ष':'z','स':'s','ह':'h'};
+        const D_VOWS = {'अ':'a','आ':'A','इ':'i','ई':'I','उ':'u','ऊ':'U','ऋ':'f','ॠ':'F','ऌ':'x','ॡ':'X','ए':'e','ऐ':'E','ओ':'o','औ':'O'};
+        const D_MRKS = {'ा':'A','ि':'i','ी':'I','ु':'u','ू':'U','ृ':'f','ॄ':'F','ॢ':'x','ॣ':'X','े':'e','ै':'E','ो':'o','ौ':'O'};
+        const D_SYMB = {'ं':'M','ः':'H','ँ':'~','ऽ':"'"};
+
+        const S_CONS = {'k':'क','K':'ख','g':'ग','G':'घ','N':'ङ','c':'च','C':'छ','j':'ज','J':'झ','Y':'ञ','w':'ट','W':'ठ','q':'ड','Q':'ढ','R':'ण','t':'त','T':'थ','d':'द','D':'ध','n':'न','p':'प','P':'फ','b':'ब','B':'भ','m':'म','y':'य','r':'र','l':'ल','v':'व','S':'श','z':'ष','s':'स','h':'ह'};
+        const S_VOWS = {'a':'अ','A':'आ','i':'इ','I':'ई','u':'उ','U':'ऊ','f':'ऋ','F':'ॠ','x':'ऌ','X':'ॡ','e':'ए','E':'ऐ','o':'ओ','O':'औ'};
+        const S_MRKS = {'A':'ा','i':'ि','I':'ी','u':'ु','U':'ू','f':'ृ','F':'ॄ','x':'ॢ','X':'ॣ','e':'े','E':'ै','o':'ो','O':'ौ'};
+        
+        const HK_TO_SLP = {'a':'a','A':'A','i':'i','I':'I','u':'u','U':'U','R':'f','RR':'F','lR':'x','lRR':'X','e':'e','ai':'E','o':'o','au':'O','M':'M','H':'H','k':'k','kh':'K','g':'g','gh':'G','G':'N','c':'c','ch':'C','j':'j','jh':'J','J':'Y','T':'w','Th':'W','D':'q','Dh':'Q','N':'R','t':'t','th':'T','d':'d','dh':'D','n':'n','p':'p','ph':'P','b':'b','bh':'B','m':'m','y':'y','r':'r','l':'l','v':'v','z':'S','S':'z','s':'s','h':'h'};
+        const SLP_TO_IAST = {'A':'ā','I':'ī','U':'ū','f':'ṛ','F':'ṝ','x':'ḷ','X':'ḹ','E':'ai','O':'au','K':'kh','g':'g','G':'gh','N':'ṅ','c':'c','C':'ch','j':'j','J':'jh','Y':'ñ','w':'ṭ','W':'ṭh','q':'ḍ','Q':'ḍh','R':'ṇ','t':'t','T':'th','d':'d','D':'dh','n':'n','p':'p','P':'ph','b':'b','B':'bh','m':'m','y':'y','r':'r','l':'l','v':'v','S':'ś','z':'ṣ','s':'s','h':'h','M':'ṃ','H':'ḥ','~':'m̐'};
+
+        function devaToSlp1(str) {
+            let res = "";
+            for (let i = 0; i < str.length; i++) {
+                let c = str[i];
+                if (D_CONS[c]) {
+                    res += D_CONS[c];
+                    let next = str[i+1];
+                    if (!next || (!D_MRKS[next] && next !== '्')) res += 'a';
+                } else if (D_VOWS[c]) res += D_VOWS[c];
+                else if (D_MRKS[c]) res += D_MRKS[c];
+                else if (D_SYMB[c]) res += D_SYMB[c];
+                else if (c !== '्') res += c;
+            }
+            return res;
+        }
+
+        function slp1ToDeva(str) {
+            let res = "";
+            for (let i = 0; i < str.length; i++) {
+                let c = str[i];
+                if (S_VOWS[c]) {
+                    if (i === 0 || !S_CONS[str[i-1]]) res += S_VOWS[c];
+                    else if (c !== 'a') res += S_MRKS[c];
+                } else if (S_CONS[c]) {
+                    res += S_CONS[c];
+                    let next = str[i+1];
+                    if (!next || (!S_VOWS[next] && !D_SYMB[next])) res += '्';
+                } else if (D_SYMB[c]) res += Object.keys(D_SYMB).find(k => D_SYMB[k] === c);
+                else res += c;
+            }
+            return res;
+        }
+
+        function hkToSlp1(str) {
+            let res = str;
+            // Handle multi-char HK strings first
+            let multi = {'kh':'K','gh':'G','ch':'C','jh':'J','Th':'W','Dh':'Q','th':'T','dh':'D','ph':'P','bh':'B','ai':'E','au':'O','RR':'F','lR':'x','lRR':'X'};
+            for (let k in multi) res = res.split(k).join(multi[k]);
+            for (let i = 0; i < res.length; i++) if (HK_TO_SLP[res[i]]) res = res.substring(0, i) + HK_TO_SLP[res[i]] + res.substring(i + 1);
+            return res;
+        }
+
+        function slp1ToIast(str) {
+            let res = "";
+            for (let char of str) {
+                if (SLP_TO_IAST[char]) res += SLP_TO_IAST[char];
+                else res += char.toLowerCase();
+            }
+            return res;
+        }
+
+        // --- DOM Elements & Logic ---
         const input = document.getElementById('wordInput');
         const btn = document.getElementById('searchBtn');
         const container = document.getElementById('resultsContainer');
         const rawJson = document.getElementById('rawJson');
         const jsonBtn = document.getElementById('jsonBtn');
-        const inputScript = document.getElementById('inputScript');
-        const outputScript = document.getElementById('outputScript');
+        const inScript = document.getElementById('inputScript');
+        const outScript = document.getElementById('outputScript');
 
-        // Auto-detect Devanagari input for user convenience
-        input.addEventListener('input', () => {
-            if (/[\u0900-\u097F]/.test(input.value)) {
-                inputScript.value = 'devanagari';
-            }
-        });
+        // Auto-detect Devanagari input
+        input.addEventListener('input', () => { if (/[\u0900-\u097F]/.test(input.value)) inScript.value = 'devanagari'; });
 
-        // Convert whatever the user types into SLP1 for the Backend
         function normalizeToSLP1(word) {
-            if (typeof Sanscript === 'undefined') return word;
-            const inScript = inputScript.value;
-            if (inScript === 'slp1') return word;
-            return Sanscript.t(word, inScript, 'slp1');
+            if (inScript.value === 'devanagari') return devaToSlp1(word);
+            if (inScript.value === 'hk') return hkToSlp1(word);
+            return word;
         }
 
-        // Convert the SLP1 JSON data into the requested Output Script
-        function renderText(slp1Text, column) {
+        function renderOutput(slp1Text, columnTitle) {
             if (!slp1Text || slp1Text === '-') return '-';
-            if (typeof Sanscript === 'undefined') return slp1Text;
-            
-            const target = outputScript.value;
-            if (target === 'slp1') return slp1Text;
-            
-            // Protect structural data and English labels from transliteration
-            if (['Dhatu ID', 'Meaning Hint'].includes(column)) return slp1Text;
+            if (['Dhatu ID', 'Meaning Hint'].includes(columnTitle)) return slp1Text;
             
             const rawTags = ['masc', 'fem', 'neut', 'eka', 'dvi', 'bahu', 'masc/fem', 'masc/neut', 'masc/fem/neut', 'any'];
             
             return slp1Text.split(' ').map(word => {
-                if (rawTags.includes(word.toLowerCase())) return word; // Leave grammar tags in English
-                return Sanscript.t(word, 'slp1', target);
+                if (rawTags.includes(word.toLowerCase())) return word;
+                if (outScript.value === 'devanagari') return slp1ToDeva(word);
+                if (outScript.value === 'iast') return slp1ToIast(word);
+                return word;
             }).join(' ');
         }
 
@@ -108,7 +159,7 @@
                 columns.forEach(c => {
                     const key = c.toLowerCase().replace(' ', '_');
                     const val = row[key] || '-';
-                    html += `<td>${renderText(val, c)}</td>`;
+                    html += `<td>${renderOutput(val, c)}</td>`;
                 });
                 html += `</tr>`;
             });
@@ -119,12 +170,6 @@
         async function searchWord() {
             const rawWord = input.value.trim();
             if (!rawWord) return;
-            
-            if (typeof Sanscript === 'undefined') {
-                container.innerHTML = `<div class='error-msg'>Fatal Error: sanscript.js failed to load locally!</div>`;
-                return;
-            }
-
             const slp1Word = normalizeToSLP1(rawWord);
             
             container.innerHTML = "<p style='text-align:center;'>Querying Database...</p>";
@@ -145,9 +190,7 @@
                 html += createTable('Numerals', ['Base Form', 'Gender', 'Case', 'Vacana'], data.numerals);
                 html += createTable('Irregular Nouns', ['Base Form', 'Gender', 'Case', 'Vacana'], data.irregulars);
 
-                if (!html) {
-                    html = `<div class='error-msg'>No matches found for "${rawWord}" (parsed as SLP1: ${slp1Word}).<br>Try entering an un-sandhied word.</div>`;
-                }
+                if (!html) html = `<div class='error-msg'>No matches found for "${rawWord}" (parsed as SLP1: ${slp1Word}).<br>Try entering an un-sandhied word.</div>`;
 
                 container.innerHTML = html;
                 rawJson.innerText = JSON.stringify(data, null, 2);
@@ -163,7 +206,7 @@
         btn.addEventListener('click', searchWord);
         input.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchWord(); });
         jsonBtn.addEventListener('click', () => { rawJson.style.display = rawJson.style.display === 'none' ? 'block' : 'none'; });
-        outputScript.addEventListener('change', () => { if (container.innerHTML && !container.innerHTML.includes('No matches')) searchWord(); });
+        outScript.addEventListener('change', () => { if (container.innerHTML && !container.innerHTML.includes('No matches')) searchWord(); });
     </script>
 </body>
 </html>
