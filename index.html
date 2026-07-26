@@ -26,7 +26,7 @@
 </head>
 <body>
     <h1>Sanskrit Morphological Engine</h1>
-    <p class="subtitle">Powered by Rust & SQLite Edge</p>
+    <p class="subtitle">Type a word in Devanagari, IAST, or SLP1</p>
 
     <div class="controls">
         <select id="outputScript">
@@ -37,7 +37,7 @@
     </div>
     
     <div class="search-box">
-        <input type="text" id="wordInput" placeholder="Type a word..." autocomplete="off" spellcheck="false" />
+        <input type="text" id="wordInput" placeholder="e.g., प्राकरोति, vyAkaroti" autocomplete="off" spellcheck="false" />
         <button id="searchBtn">Analyze</button>
     </div>
 
@@ -47,13 +47,22 @@
     <pre id="rawJson"></pre>
 
     <script>
-        // Custom Self-Contained Transliteration Engine
+        // Custom Transliteration Maps
         const SLP_TO_DEVA_VOWELS = {'a':'अ', 'A':'आ', 'i':'इ', 'I':'ई', 'u':'उ', 'U':'ऊ', 'f':'ऋ', 'F':'ॠ', 'x':'ऌ', 'X':'ॡ', 'e':'ए', 'E':'ऐ', 'o':'ओ', 'O':'औ'};
         const SLP_TO_DEVA_MATRAS = {'a':'', 'A':'ा', 'i':'ि', 'I':'ी', 'u':'ु', 'U':'ू', 'f':'ृ', 'F':'ॄ', 'x':'ॢ', 'X':'ॣ', 'e':'े', 'E':'ै', 'o':'ो', 'O':'ौ'};
         const SLP_TO_DEVA_CONS = {'k':'क', 'K':'ख', 'g':'ग', 'G':'घ', 'N':'ङ', 'c':'च', 'C':'छ', 'j':'ज', 'J':'झ', 'Y':'ञ', 'w':'ट', 'W':'ठ', 'q':'ड', 'Q':'ढ', 'R':'ण', 't':'त', 'T':'थ', 'd':'द', 'D':'ध', 'n':'न', 'p':'प', 'P':'फ', 'b':'ब', 'B':'भ', 'm':'म', 'y':'य', 'r':'र', 'l':'ल', 'v':'व', 'S':'श', 'z':'ष', 's':'स', 'h':'ह'};
         const SLP_TO_DEVA_EXTRA = {'M':'ं', 'H':'ः', '~':'ँ'};
-
         const SLP_TO_IAST = {'A':'ā', 'I':'ī', 'U':'ū', 'f':'ṛ', 'F':'ṝ', 'x':'ḷ', 'X':'ḹ', 'E':'ai', 'O':'au', 'K':'kh', 'g':'g', 'G':'gh', 'N':'ṅ', 'c':'c', 'C':'ch', 'j':'j', 'J':'jh', 'Y':'ñ', 'w':'ṭ', 'W':'ṭh', 'q':'ḍ', 'Q':'ḍh', 'R':'ṇ', 't':'t', 'T':'th', 'd':'d', 'D':'dh', 'n':'n', 'p':'p', 'P':'ph', 'b':'b', 'B':'bh', 'm':'m', 'y':'y', 'r':'r', 'l':'l', 'v':'v', 'S':'ś', 'z':'ṣ', 's':'s', 'h':'h', 'M':'ṃ', 'H':'ḥ', '~':'m̐'};
+
+        // Reverse Maps for Input Translation (Devanagari -> SLP1)
+        const DEVA_TO_SLP = {};
+        for(let k in SLP_TO_DEVA_VOWELS) DEVA_TO_SLP[SLP_TO_DEVA_VOWELS[k]] = k;
+        for(let k in SLP_TO_DEVA_MATRAS) { if(SLP_TO_DEVA_MATRAS[k]) DEVA_TO_SLP[SLP_TO_DEVA_MATRAS[k]] = k; }
+        for(let k in SLP_TO_DEVA_CONS) DEVA_TO_SLP[SLP_TO_DEVA_CONS[k]] = k;
+        for(let k in SLP_TO_DEVA_EXTRA) DEVA_TO_SLP[SLP_TO_DEVA_EXTRA[k]] = k;
+        
+        const IAST_TO_SLP = {};
+        for(let k in SLP_TO_IAST) IAST_TO_SLP[SLP_TO_IAST[k]] = k;
 
         function isVowel(c) { return SLP_TO_DEVA_VOWELS[c] !== undefined; }
         function isConsonant(c) { return SLP_TO_DEVA_CONS[c] !== undefined; }
@@ -64,12 +73,10 @@
             while (i < text.length) {
                 let c = text[i];
                 if (isVowel(c)) {
-                    // If it's the first char, or the previous char wasn't a consonant
                     if (i === 0 || !isConsonant(text[i-1])) res += SLP_TO_DEVA_VOWELS[c];
                     else res += SLP_TO_DEVA_MATRAS[c];
                 } else if (isConsonant(c)) {
                     res += SLP_TO_DEVA_CONS[c];
-                    // If the next char is not a vowel, add a virama (unless it's the end of string)
                     if (i === text.length - 1 || (!isVowel(text[i+1]) && !SLP_TO_DEVA_EXTRA[text[i+1]])) res += "्";
                 } else if (SLP_TO_DEVA_EXTRA[c]) {
                     res += SLP_TO_DEVA_EXTRA[c];
@@ -90,17 +97,47 @@
             return res;
         }
 
+        function devanagariToSlp1(text) {
+            let res = "";
+            for (let i = 0; i < text.length; i++) {
+                let c = text[i];
+                if (DEVA_TO_SLP[c]) {
+                    res += DEVA_TO_SLP[c];
+                    // If it's a consonant and the next char isn't a matra or virama, assume 'a'
+                    if (c >= 'क' && c <= 'ह') {
+                        if (i+1 === text.length || (!DEVA_TO_SLP[text[i+1]] && text[i+1] !== '्')) {
+                            // Only append 'a' if the next char is not a known matra
+                            let nextC = text[i+1];
+                            if(!['ा','ि','ी','ु','ू','ृ','ॄ','ॢ','ॣ','े','ै','ो','ौ','्','ं','ः'].includes(nextC)) res += 'a';
+                        }
+                    }
+                }
+            }
+            return res;
+        }
+
+        function iastToSlp1(text) {
+            let res = text;
+            for(let key in IAST_TO_SLP) {
+                res = res.replaceAll(key, IAST_TO_SLP[key]);
+            }
+            return res;
+        }
+
+        function normalizeToSLP1(word) {
+            if (/[\u0900-\u097F]/.test(word)) return devanagariToSlp1(word);
+            if (/[āīūṛṝḷḹēōāiīuūeoṃḥśṣṭḍṇñṅ]/.test(word.toLowerCase())) return iastToSlp1(word);
+            return word; // Assume SLP1
+        }
+
         function renderText(slp1Text, column) {
             if (!slp1Text || slp1Text === '-') return '-';
             const target = outputScript.value;
             if (target === 'slp1') return slp1Text;
-            
-            // Protect structural data and English labels
             if (['Dhatu ID', 'Meaning Hint'].includes(column)) return slp1Text;
             const rawTags = ['masc', 'fem', 'neut', 'eka', 'dvi', 'bahu', 'masc/fem', 'masc/neut', 'masc/fem/neut', 'any'];
             if (rawTags.includes(slp1Text.toLowerCase())) return slp1Text;
 
-            // Simple split processing
             return slp1Text.split(' ').map(word => {
                 if (target === 'devanagari') return slp1ToDevanagari(word);
                 if (target === 'iast') return slp1ToIast(word);
@@ -137,8 +174,7 @@
             const rawWord = input.value.trim();
             if (!rawWord) return;
             
-            // For now, require SLP1 input while we test the output engine
-            const slp1Word = rawWord; 
+            const slp1Word = normalizeToSLP1(rawWord);
             
             container.innerHTML = "<p style='text-align:center;'>Querying Database...</p>";
             document.body.classList.add('loading');
@@ -159,7 +195,7 @@
                 html += createTable('Numerals', ['Base Form', 'Gender', 'Case', 'Vacana'], data.numerals);
                 html += createTable('Irregular Nouns', ['Base Form', 'Gender', 'Case', 'Vacana'], data.irregulars);
 
-                container.innerHTML = html || "<p style='text-align:center; color: #ef4444;'>No matches found. Try entering an un-sandhied word.</p>";
+                container.innerHTML = html || `<p style='text-align:center; color: #ef4444;'>No matches found for ${slp1Word}.</p>`;
                 
                 rawJson.innerText = JSON.stringify(data, null, 2);
                 if(html) jsonBtn.style.display = 'block';
