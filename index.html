@@ -43,7 +43,6 @@
     <h1>Sanskrit Morphological Engine</h1>
     <p class="subtitle">Powered by Rust & SQLite Edge</p>
 
-    <!-- Global Script Controls -->
     <div class="controls">
         <select id="inputScript">
             <option value="slp1">Input: SLP1</option>
@@ -58,14 +57,11 @@
         </select>
     </div>
 
-    <!-- TABS -->
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('analyzeTab')">Analyzer</button>
         <button class="tab-btn" onclick="switchTab('generateTab')">Generator</button>
-        <button class="tab-btn" onclick="switchTab('dhatuTab')">Dhātu Dictionary</button>
     </div>
 
-    <!-- TAB 1: ANALYZER -->
     <div id="analyzeTab" class="tab-content active">
         <div class="search-row">
             <input type="text" id="analyzeInput" placeholder="Word to analyze (e.g. prakaroti)" autocomplete="off" spellcheck="false" />
@@ -73,7 +69,6 @@
         </div>
     </div>
 
-    <!-- TAB 2: GENERATOR -->
     <div id="generateTab" class="tab-content">
         <div class="search-row">
             <input type="text" id="genRoot" placeholder="Root (e.g. kf)" style="max-width: 150px;" />
@@ -101,15 +96,7 @@
                 <option value="Atmanepadam">Ātmanepada</option>
                 <option value="karmaRi">Karmaṇi (Passive)</option>
             </select>
-            <button onclick="runGenerator()">Generate Verb</button>
-        </div>
-    </div>
-
-    <!-- TAB 3: DHATU SEARCH -->
-    <div id="dhatuTab" class="tab-content">
-        <div class="search-row">
-            <input type="text" id="dhatuInput" placeholder="Search roots or meanings (e.g. gam, to go)" autocomplete="off" spellcheck="false" />
-            <button onclick="runDhatuSearch()">Search Dhātus</button>
+            <button onclick="runGenerator()">Generate</button>
         </div>
     </div>
 
@@ -123,9 +110,11 @@
         const D_VOWS = {'अ':'a','आ':'A','इ':'i','ई':'I','उ':'u','ऊ':'U','ऋ':'f','ॠ':'F','ऌ':'x','ॡ':'X','ए':'e','ऐ':'E','ओ':'o','औ':'O'};
         const D_MRKS = {'ा':'A','ि':'i','ी':'I','ु':'u','ू':'U','ृ':'f','ॄ':'F','ॢ':'x','ॣ':'X','े':'e','ै':'E','ो':'o','ौ':'O'};
         const D_SYMB = {'ं':'M','ः':'H','ँ':'~','ऽ':"'"};
-        const S_CONS = {'k':'क','K':'ख','g':'ग','G':'घ','N':'ङ','c':'च','C':'छ','j':'ज','J':'झ','Y':'ञ','w':'ट','W':'ठ','q':'ड','Q':'ढ','R':'ण','t':'त','T':'थ','d':'d','D':'dh','n':'न','p':'p','P':'फ','b':'b','B':'bh','m':'m','y':'y','r':'r','l':'l','v':'v','S':'श','z':'ष','s':'स','h':'h'};
+
+        const S_CONS = {'k':'क','K':'ख','g':'ग','G':'घ','N':'ङ','c':'च','C':'छ','j':'ज','J':'झ','Y':'ञ','w':'ट','W':'ठ','q':'ड','Q':'ढ','R':'ण','t':'त','T':'थ','d':'d','D':'ध','n':'न','p':'p','P':'फ','b':'b','B':'bh','m':'m','y':'y','r':'r','l':'l','v':'v','S':'श','z':'ष','s':'स','h':'h'};
         const S_VOWS = {'a':'अ','A':'आ','i':'इ','I':'ई','u':'उ','U':'ऊ','f':'ऋ','F':'ॠ','x':'ऌ','X':'ॡ','e':'ए','E':'ऐ','o':'ओ','O':'औ'};
         const S_MRKS = {'A':'ा','i':'ि','I':'ी','u':'ु','U':'ू','f':'ृ','F':'ॄ','x':'ॢ','X':'ॣ','e':'e','E':'ै','o':'ो','O':'ौ'};
+        
         const HK_TO_SLP = {'a':'a','A':'A','i':'i','I':'I','u':'u','U':'U','R':'f','RR':'F','lR':'x','lRR':'X','e':'e','ai':'E','o':'o','au':'O','M':'M','H':'H','k':'k','kh':'K','g':'g','gh':'G','G':'N','c':'c','ch':'C','j':'j','jh':'J','J':'Y','T':'w','Th':'W','D':'q','Dh':'Q','N':'R','t':'t','th':'T','d':'d','dh':'D','n':'n','p':'p','ph':'P','b':'b','bh':'B','m':'m','y':'y','r':'r','l':'l','v':'v','z':'S','S':'z','s':'s','h':'h'};
         const SLP_TO_IAST = {'A':'ā','I':'ī','U':'ū','f':'ṛ','F':'ṝ','x':'ḷ','X':'ḹ','E':'ai','O':'au','K':'kh','g':'g','G':'gh','N':'ṅ','c':'c','C':'ch','j':'j','J':'jh','Y':'ñ','w':'ṭ','W':'ṭh','q':'ḍ','Q':'ḍh','R':'ṇ','t':'t','T':'th','d':'d','D':'dh','n':'n','p':'p','P':'ph','b':'b','B':'bh','m':'m','y':'y','r':'r','l':'l','v':'v','S':'ś','z':'ṣ','s':'s','h':'h','M':'ṃ','H':'ḥ','~':'m̐'};
 
@@ -196,7 +185,6 @@
 
         function toggleJson() { rawJson.style.display = rawJson.style.display === 'none' ? 'block' : 'none'; }
 
-        // Auto-detect Devanagari input across all inputs
         document.querySelectorAll('input').forEach(inp => {
             inp.addEventListener('input', () => { if (/[\u0900-\u097F]/.test(inp.value)) inScript.value = 'devanagari'; });
         });
@@ -209,9 +197,7 @@
 
         function renderOutput(slp1Text, columnTitle) {
             if (!slp1Text || slp1Text === '-') return '-';
-            
-            // Protect English metadata or numeric IDs
-            if (['Dhatu ID', 'Meaning', 'English', 'Category'].includes(columnTitle)) return slp1Text;
+            if (['Dhatu ID', 'Meaning Hint'].includes(columnTitle)) return slp1Text;
             if (/^[0-9.]+$/.test(slp1Text)) return slp1Text;
 
             const rawTags = ['masc', 'fem', 'neut', 'eka', 'dvi', 'bahu', 'masc/fem', 'masc/neut', 'masc/fem/neut', 'any'];
@@ -260,7 +246,6 @@
             }
         }
 
-        // --- THE 3 MAIN FUNCTIONS ---
         async function runAnalyzer() {
             const rawWord = document.getElementById('analyzeInput').value.trim();
             if (!rawWord) return;
@@ -305,41 +290,14 @@
             jsonBtn.style.display = 'block';
         }
 
-        async function runDhatuSearch() {
-            const rawWord = document.getElementById('dhatuInput').value.trim();
-            if (!rawWord) return;
-            const query = normalizeToSLP1(rawWord);
-
-            const data = await fetchAPI(`/api/dhatus/${query}`);
-            if (!data || data.length === 0) {
-                container.innerHTML = `<div class='error-msg'>No Dhātus found matching "${rawWord}".</div>`;
-                return;
-            }
-
-            // Clean up the data dynamically for the table
-            const cleanedData = data.map(d => ({
-                'Dhatu ID': d.dhatu_id,
-                'Root': d.mUlaDAtuH || '-',
-                'Meaning': d.aTfa || d.hin || d.eng || '-',
-                'Gana': d.gaRaH || '-'
-            }));
-
-            container.innerHTML = createTable('Dhātu Results', ['Dhatu ID', 'Root', 'Meaning', 'Gana'], cleanedData);
-            jsonBtn.style.display = 'block';
-        }
-
-        // Enter key listeners
         document.getElementById('analyzeInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') runAnalyzer(); });
         document.getElementById('genRoot').addEventListener('keypress', (e) => { if (e.key === 'Enter') runGenerator(); });
-        document.getElementById('dhatuInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') runDhatuSearch(); });
         
-        // Re-render table if output script changes
         outScript.addEventListener('change', () => { 
             const activeTab = document.querySelector('.tab-btn.active').innerText;
             if (container.innerHTML && !container.innerHTML.includes('No matches') && !container.innerHTML.includes('Error')) {
                 if (activeTab === 'Analyzer') runAnalyzer();
                 if (activeTab === 'Generator') runGenerator();
-                if (activeTab === 'Dhātu Dictionary') runDhatuSearch();
             }
         });
     </script>
