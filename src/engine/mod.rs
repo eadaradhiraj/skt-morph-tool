@@ -5,5 +5,6 @@ pub mod pronouns;
 pub mod numerals;
 pub mod irregulars;
 pub mod namadhatu;
+pub mod declension;
 pub mod generator;
 pub mod dhatu;

@@ -10,7 +10,7 @@
         p.subtitle { text-align: center; color: #a1a1aa; margin-bottom: 2rem; }
         .controls { display: flex; gap: 10px; margin-bottom: 1.5rem; justify-content: center; flex-wrap: wrap; border-bottom: 1px solid #333; padding-bottom: 1.5rem; }
         select, input { padding: 10px; background: #1e1e1e; color: white; border: 1px solid #333; border-radius: 8px; font-size: 1rem; }
-        input { width: 100%; max-width: 400px; font-size: 1.1rem; }
+        input { width: 100%; font-size: 1.1rem; }
         button { padding: 10px 20px; font-size: 1.1rem; border-radius: 8px; border: none; background: #f59e0b; color: #121212; font-weight: bold; cursor: pointer; transition: 0.2s; }
         button:hover { background: #d97706; }
         .tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 2rem; }
@@ -30,65 +30,67 @@
         #rawJson { margin-top: 3rem; background: #1e1e1e; padding: 1rem; border-radius: 8px; font-size: 0.9rem; color: #6ee7b7; overflow-x: auto; display: none; }
         .toggle-json { background: transparent; border: 1px solid #f59e0b; color: #f59e0b; margin-top: 1rem; }
     </style>
-  <script type="module" crossorigin src="/assets/index-5QnQTVmH.js"></script>
+  <script type="module" crossorigin src="/assets/index-MXGyhkBU.js"></script>
 </head>
 <body>
     <h1>Sanskrit Morphological Engine</h1>
     <p class="subtitle">Powered by Rust & SQLite Edge</p>
 
     <div class="controls">
-        <select id="inputScript">
-            <option value="slp1">Input: SLP1</option>
-            <option value="devanagari">Input: Devanagari</option>
-            <option value="hk">Input: Harvard-Kyoto</option>
-        </select>
+        <select id="inputScript"><option value="slp1">Input: SLP1</option><option value="devanagari">Input: Devanagari</option><option value="hk">Input: Harvard-Kyoto</option></select>
         <span style="display:flex; align-items:center; color:#a1a1aa;">&rarr;</span>
-        <select id="outputScript">
-            <option value="devanagari">Output: Devanagari</option>
-            <option value="iast">Output: IAST</option>
-        </select>
+        <select id="outputScript"><option value="devanagari">Output: Devanagari</option><option value="iast">Output: IAST</option></select>
     </div>
 
     <div class="tabs">
         <button class="tab-btn active" id="btnAnalyzeTab">Analyzer</button>
-        <button class="tab-btn" id="btnGenerateTab">Generator</button>
+        <button class="tab-btn" id="btnGenVerbTab">Gen Verbs</button>
+        <button class="tab-btn" id="btnGenPartTab">Gen Participles</button>
+        <button class="tab-btn" id="btnGenNounTab">Gen Nouns</button>
     </div>
 
+    <!-- TAB 1: ANALYZER -->
     <div id="analyzeTab" class="tab-content active">
+        <div class="search-row"><input type="text" id="analyzeInput" placeholder="Word (e.g. prakaroti)" autocomplete="off" spellcheck="false" style="max-width: 400px;" /><button id="runAnalyzerBtn">Analyze</button></div>
+    </div>
+
+    <!-- TAB 2: GEN VERBS -->
+    <div id="genVerbTab" class="tab-content">
         <div class="search-row">
-            <input type="text" id="analyzeInput" placeholder="Word to analyze (e.g. prakaroti)" autocomplete="off" spellcheck="false" />
-            <button id="btnAnalyze">Analyze</button>
+            <input type="text" id="gvRoot" placeholder="Root (e.g. kf)" style="max-width: 120px;" />
+            <input type="text" id="gvUpa" placeholder="Prefix (e.g. pra)" style="max-width: 120px;" />
+            <select id="gvLakara">
+                <option value="law">Laṭ (Present)</option><option value="low">Loṭ (Imperative)</option><option value="laN">Laṅ (Imperfect)</option><option value="viDiliN">Vidhi Liṅ (Optative)</option><option value="lfw">Lṛṭ (Future)</option><option value="liw">Liṭ (Perfect)</option><option value="luw">Luṭ (Periphrastic)</option><option value="ASIrliN">Āśīr Liṅ (Benedict)</option><option value="luN">Luṅ (Aorist)</option>
+            </select>
+        </div>
+        <div class="search-row">
+            <select id="gvPurusha"><option value="praTama">3rd Person</option><option value="maDyama">2nd Person</option><option value="uttama">1st Person</option></select>
+            <select id="gvVoice"><option value="parasmEpadam">Parasmaipada</option><option value="Atmanepadam">Ātmanepada</option><option value="karmaRi">Passive</option></select>
+            <button id="runGenVerbBtn">Generate</button>
         </div>
     </div>
 
-    <div id="generateTab" class="tab-content">
+    <!-- TAB 3: GEN PARTICIPLES -->
+    <div id="genPartTab" class="tab-content">
         <div class="search-row">
-            <input type="text" id="genRoot" placeholder="Root (e.g. kf)" style="max-width: 150px;" />
-            <input type="text" id="genUpa" placeholder="Prefix (e.g. pra)" style="max-width: 150px;" />
-            <select id="genLakara">
-                <option value="law">Laṭ (Present)</option>
-                <option value="low">Loṭ (Imperative)</option>
-                <option value="laN">Laṅ (Imperfect)</option>
-                <option value="viDiliN">Vidhi Liṅ (Optative)</option>
-                <option value="lfw">Lṛṭ (Future)</option>
-                <option value="liw">Liṭ (Perfect)</option>
-                <option value="luw">Luṭ (Periphrastic Fut.)</option>
-                <option value="ASIrliN">Āśīr Liṅ (Benedictive)</option>
-                <option value="luN">Luṅ (Aorist)</option>
+            <input type="text" id="gpRoot" placeholder="Root (e.g. kf)" style="max-width: 120px;" />
+            <input type="text" id="gpUpa" placeholder="Prefix (e.g. pra)" style="max-width: 120px;" />
+            <select id="gpPratyaya">
+                <option value="Sotf">Śatṛ (Present Par.)</option><option value="SAnac">Śānac (Present Atm.)</option><option value="kta">Kta (Past Pass.)</option><option value="ktavatu">Ktavat (Past Act.)</option><option value="tfc">Tṛc (Noun of Agency)</option><option value="tumun">Tumun (Infinitive)</option><option value="ktvA">Ktvā (Gerund)</option><option value="lyap">Lyap (Prefixed Gerund)</option>
             </select>
         </div>
         <div class="search-row">
-            <select id="genPurusha">
-                <option value="praTama">Prathama (3rd Person)</option>
-                <option value="maDyama">Madhyama (2nd Person)</option>
-                <option value="uttama">Uttama (1st Person)</option>
-            </select>
-            <select id="genVoice">
-                <option value="parasmEpadam">Parasmaipada</option>
-                <option value="Atmanepadam">Ātmanepada</option>
-                <option value="karmaRi">Karmaṇi (Passive)</option>
-            </select>
-            <button id="btnGenerate">Generate</button>
+            <select id="gpGender"><option value="masculine">Masculine</option><option value="feminine">Feminine</option><option value="neuter">Neuter</option></select>
+            <button id="runGenPartBtn">Generate</button>
+        </div>
+    </div>
+
+    <!-- TAB 4: GEN NOUNS -->
+    <div id="genNounTab" class="tab-content">
+        <div class="search-row">
+            <input type="text" id="gnBase" placeholder="Base noun (e.g. rAjan)" style="max-width: 250px;" />
+            <select id="gnGender"><option value="masculine">Masculine</option><option value="feminine">Feminine</option><option value="neuter">Neuter</option></select>
+            <button id="runGenNounBtn">Generate</button>
         </div>
     </div>
 

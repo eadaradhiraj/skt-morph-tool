@@ -1,5 +1,6 @@
 use fancy_regex::Regex;
 use lazy_static::lazy_static;
+use crate::engine::declension::apply_natva;
 
 struct UpasargaRule {
     pattern: Regex,
@@ -12,56 +13,15 @@ lazy_static! {
         UpasargaRule { pattern: Regex::new(r"^samudA").unwrap(), canonical: "sam + ud + AN", prepend: "" },
         UpasargaRule { pattern: Regex::new(r"^sa[mMnYNR]u[dtcjNYRnl]A").unwrap(), canonical: "sam + ud + AN", prepend: "" },
         UpasargaRule { pattern: Regex::new(r"^sa[mMnYNR]u[dtcjNYRnl]").unwrap(), canonical: "sam + ud", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^sa[mMnYNR]praty").unwrap(), canonical: "sam + prati", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^sa[mMnYNR]prati").unwrap(), canonical: "sam + prati", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^sa[mMnYNR]pra").unwrap(), canonical: "sam + pra", prepend: "" },
         UpasargaRule { pattern: Regex::new(r"^vyA").unwrap(), canonical: "vi + AN", prepend: "" },
         UpasargaRule { pattern: Regex::new(r"^pratyA").unwrap(), canonical: "prati + AN", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^paryA").unwrap(), canonical: "pari + AN", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^udA").unwrap(), canonical: "ud + AN", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^prA").unwrap(), canonical: "pra + AN", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^apA").unwrap(), canonical: "apa + AN", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^anvA").unwrap(), canonical: "anu + AN", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^avA").unwrap(), canonical: "ava + AN", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^nirA").unwrap(), canonical: "nir + AN", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^durA").unwrap(), canonical: "dus + AN", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^aDyA").unwrap(), canonical: "aDi + AN", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^apyA").unwrap(), canonical: "api + AN", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^atyA").unwrap(), canonical: "ati + AN", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^aByA").unwrap(), canonical: "aBi + AN", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^upA").unwrap(), canonical: "upa + AN", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^svA").unwrap(), canonical: "su + AN", prepend: "" },
         UpasargaRule { pattern: Regex::new(r"^vy").unwrap(), canonical: "vi", prepend: "" },
         UpasargaRule { pattern: Regex::new(r"^vi").unwrap(), canonical: "vi", prepend: "" },
         UpasargaRule { pattern: Regex::new(r"^praty").unwrap(), canonical: "prati", prepend: "" },
         UpasargaRule { pattern: Regex::new(r"^prati").unwrap(), canonical: "prati", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^pary").unwrap(), canonical: "pari", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^pari").unwrap(), canonical: "pari", prepend: "" },
         UpasargaRule { pattern: Regex::new(r"^sa[mMnYNR]").unwrap(), canonical: "sam", prepend: "" },
         UpasargaRule { pattern: Regex::new(r"^sam").unwrap(), canonical: "sam", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^u[dt]y").unwrap(), canonical: "ud", prepend: "y" },
-        UpasargaRule { pattern: Regex::new(r"^u[dtcjNYRnl]").unwrap(), canonical: "ud", prepend: "" },
         UpasargaRule { pattern: Regex::new(r"^pra").unwrap(), canonical: "pra", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^parA").unwrap(), canonical: "parA", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^apa").unwrap(), canonical: "apa", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^anv").unwrap(), canonical: "anu", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^anu").unwrap(), canonical: "anu", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^ava").unwrap(), canonical: "ava", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^ni[rsSzR]").unwrap(), canonical: "nir", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^du[rsSzR]").unwrap(), canonical: "dus", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^ny").unwrap(), canonical: "ni", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^ni").unwrap(), canonical: "ni", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^aDy").unwrap(), canonical: "aDi", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^aDi").unwrap(), canonical: "aDi", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^apy").unwrap(), canonical: "api", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^api").unwrap(), canonical: "api", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^aty").unwrap(), canonical: "ati", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^ati").unwrap(), canonical: "ati", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^sv").unwrap(), canonical: "su", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^su").unwrap(), canonical: "su", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^aBy").unwrap(), canonical: "aBi", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^aBi").unwrap(), canonical: "aBi", prepend: "" },
-        UpasargaRule { pattern: Regex::new(r"^upa").unwrap(), canonical: "upa", prepend: "" },
         UpasargaRule { pattern: Regex::new(r"^A").unwrap(), canonical: "AN", prepend: "" },
     ];
 }
@@ -78,4 +38,44 @@ pub fn get_upasarga_splits(word: &str) -> Vec<(String, String)> {
         }
     }
     splits
+}
+
+pub fn apply_upasarga_sandhi(upasarga_str: &str, form: &str) -> String {
+    if upasarga_str.is_empty() { return form.to_string(); }
+    let prefixes: Vec<&str> = upasarga_str.split('+').map(|s| s.trim()).collect();
+    let mut result = form.to_string();
+    
+    for mut p in prefixes.into_iter().rev() {
+        if p == "AN" { p = "A"; }
+        
+        let p_len = p.len();
+        let p_last = p.chars().last().unwrap_or(' ');
+        let r_first = result.chars().next().unwrap_or(' ');
+        let is_vowel = |c: char| "aAiIuUfFeEoO".contains(c);
+        
+        if p_last == 'i' && is_vowel(r_first) {
+            result = format!("{}y{}", &p[..p_len-1], result);
+        } else if p_last == 'u' && is_vowel(r_first) {
+            result = format!("{}v{}", &p[..p_len-1], result);
+        } else if p_last == 'a' || p_last == 'A' {
+            if r_first == 'a' || r_first == 'A' { result = format!("{}A{}", &p[..p_len-1], &result[1..]); }
+            else if r_first == 'i' || r_first == 'I' { result = format!("{}e{}", &p[..p_len-1], &result[1..]); }
+            else if r_first == 'u' || r_first == 'U' { result = format!("{}o{}", &p[..p_len-1], &result[1..]); }
+            else if r_first == 'f' || r_first == 'F' { result = format!("{}ar{}", &p[..p_len-1], &result[1..]); }
+            else { result = format!("{}{}", p, result); }
+        } else if p_last == 'm' {
+            if !is_vowel(r_first) { result = format!("{}M{}", &p[..p_len-1], result); }
+            else { result = format!("{}{}", p, result); }
+        } else if p_last == 'd' {
+            if "kKqQpPzSs".contains(r_first) { result = format!("{}t{}", &p[..p_len-1], result); }
+            else if "cC".contains(r_first) { result = format!("{}c{}", &p[..p_len-1], result); }
+            else if "jJ".contains(r_first) { result = format!("{}j{}", &p[..p_len-1], result); }
+            else { result = format!("{}{}", p, result); }
+        } else {
+            result = format!("{}{}", p, result);
+        }
+        
+        result = apply_natva(&result);
+    }
+    result
 }
