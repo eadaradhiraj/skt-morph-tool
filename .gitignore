@@ -2,3 +2,4 @@ data/*.db
 data/*.sqlite
 data/*.sqlite3
 target/
+frontend/node_modules/

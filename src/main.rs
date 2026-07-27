@@ -2,9 +2,9 @@ use axum::{
     routing::get,
     Router,
     extract::{Path, State, Query},
-    response::Html,
     Json,
 };
+use tower_http::services::ServeDir;
 use deadpool_sqlite::{Config, Pool, Runtime};
 use serde_json::Value;
 use serde::Deserialize;
@@ -37,13 +37,12 @@ async fn main() {
 
     let cfg = Config::new("data/skt_morphology.db");
     let pool = cfg.create_pool(Runtime::Tokio1).unwrap();
-
     let app_state = Arc::new(AppState { pool });
 
+    // Serve the bundled Vite frontend from /frontend/dist
     let app = Router::new()
-        .route("/", get(serve_ui))
+        .nest_service("/", ServeDir::new("frontend/dist"))
         .route("/api/analyze/:word", get(analyze_word))
-        .route("/api/dhatus/:query", get(search_dhatu_api))
         .route("/api/generate/verb", get(generate_verb_api))
         .with_state(app_state);
 
@@ -55,38 +54,10 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn serve_ui() -> Html<&'static str> {
-    Html(include_str!("../index.html"))
+async fn analyze_word(Path(word): Path<String>, State(state): State<Arc<AppState>>) -> Json<Value> {
+    Json(engine::analyzer::analyze(&word, &state.pool).await)
 }
 
-async fn analyze_word(
-    Path(word): Path<String>,
-    State(state): State<Arc<AppState>>,
-) -> Json<Value> {
-    let results = engine::analyzer::analyze(&word, &state.pool).await;
-    Json(results)
-}
-
-async fn search_dhatu_api(
-    Path(query): Path<String>,
-    State(state): State<Arc<AppState>>,
-) -> Json<Value> {
-    let results = engine::dhatu::search_dhatu(&query, &state.pool).await;
-    Json(results)
-}
-
-async fn generate_verb_api(
-    Query(params): Query<ConjugateQuery>,
-    State(state): State<Arc<AppState>>,
-) -> Json<Value> {
-    let results = engine::generator::generate_verb(
-        &state.pool, 
-        &params.dhatu_id, 
-        &params.root,
-        &params.upasarga, 
-        &params.lakara, 
-        &params.purusha, 
-        &params.voice
-    ).await;
-    Json(results)
+async fn generate_verb_api(Query(params): Query<ConjugateQuery>, State(state): State<Arc<AppState>>) -> Json<Value> {
+    Json(engine::generator::generate_verb(&state.pool, &params.dhatu_id, &params.root, &params.upasarga, &params.lakara, &params.purusha, &params.voice).await)
 }

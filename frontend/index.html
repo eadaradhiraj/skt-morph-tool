@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>skt-morph | Sanskrit Engine</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background-color: #121212; color: #ffffff; max-width: 900px; margin: 0 auto; padding: 2rem; }
+        h1 { color: #f59e0b; text-align: center; margin-bottom: 0.5rem; }
+        p.subtitle { text-align: center; color: #a1a1aa; margin-bottom: 2rem; }
+        .controls { display: flex; gap: 10px; margin-bottom: 1.5rem; justify-content: center; flex-wrap: wrap; border-bottom: 1px solid #333; padding-bottom: 1.5rem; }
+        select, input { padding: 10px; background: #1e1e1e; color: white; border: 1px solid #333; border-radius: 8px; font-size: 1rem; }
+        input { width: 100%; max-width: 400px; font-size: 1.1rem; }
+        button { padding: 10px 20px; font-size: 1.1rem; border-radius: 8px; border: none; background: #f59e0b; color: #121212; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #d97706; }
+        .tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 2rem; }
+        .tab-btn { background: #27272a; color: #a1a1aa; border: 1px solid #333; }
+        .tab-btn.active { background: #f59e0b; color: #121212; border-color: #f59e0b; }
+        .tab-content { display: none; animation: fadeIn 0.3s; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .search-row { display: flex; gap: 10px; justify-content: center; margin-bottom: 1rem; flex-wrap: wrap; }
+        .category-title { color: #f59e0b; border-bottom: 1px solid #333; padding-bottom: 0.5rem; margin-top: 2rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: #1e1e1e; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #333; font-size: 1.1rem; }
+        th { background: #27272a; color: #a1a1aa; font-weight: 600; font-size: 1rem; }
+        tr:hover { background: #2a2a2a; }
+        .loading { opacity: 0.5; pointer-events: none; }
+        .error-msg { color: #ef4444; text-align: center; padding: 1rem; background: #450a0a; border-radius: 8px; margin-top: 1rem; }
+        #rawJson { margin-top: 3rem; background: #1e1e1e; padding: 1rem; border-radius: 8px; font-size: 0.9rem; color: #6ee7b7; overflow-x: auto; display: none; }
+        .toggle-json { background: transparent; border: 1px solid #f59e0b; color: #f59e0b; margin-top: 1rem; }
+    </style>
+</head>
+<body>
+    <h1>Sanskrit Morphological Engine</h1>
+    <p class="subtitle">Powered by Rust & SQLite Edge</p>
+
+    <div class="controls">
+        <select id="inputScript">
+            <option value="slp1">Input: SLP1</option>
+            <option value="devanagari">Input: Devanagari</option>
+            <option value="hk">Input: Harvard-Kyoto</option>
+        </select>
+        <span style="display:flex; align-items:center; color:#a1a1aa;">&rarr;</span>
+        <select id="outputScript">
+            <option value="devanagari">Output: Devanagari</option>
+            <option value="iast">Output: IAST</option>
+        </select>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" id="btnAnalyzeTab">Analyzer</button>
+        <button class="tab-btn" id="btnGenerateTab">Generator</button>
+    </div>
+
+    <div id="analyzeTab" class="tab-content active">
+        <div class="search-row">
+            <input type="text" id="analyzeInput" placeholder="Word to analyze (e.g. prakaroti)" autocomplete="off" spellcheck="false" />
+            <button id="btnAnalyze">Analyze</button>
+        </div>
+    </div>
+
+    <div id="generateTab" class="tab-content">
+        <div class="search-row">
+            <input type="text" id="genRoot" placeholder="Root (e.g. kf)" style="max-width: 150px;" />
+            <input type="text" id="genUpa" placeholder="Prefix (e.g. pra)" style="max-width: 150px;" />
+            <select id="genLakara">
+                <option value="law">Laṭ (Present)</option>
+                <option value="low">Loṭ (Imperative)</option>
+                <option value="laN">Laṅ (Imperfect)</option>
+                <option value="viDiliN">Vidhi Liṅ (Optative)</option>
+                <option value="lfw">Lṛṭ (Future)</option>
+                <option value="liw">Liṭ (Perfect)</option>
+                <option value="luw">Luṭ (Periphrastic Fut.)</option>
+                <option value="ASIrliN">Āśīr Liṅ (Benedictive)</option>
+                <option value="luN">Luṅ (Aorist)</option>
+            </select>
+        </div>
+        <div class="search-row">
+            <select id="genPurusha">
+                <option value="praTama">Prathama (3rd Person)</option>
+                <option value="maDyama">Madhyama (2nd Person)</option>
+                <option value="uttama">Uttama (1st Person)</option>
+            </select>
+            <select id="genVoice">
+                <option value="parasmEpadam">Parasmaipada</option>
+                <option value="Atmanepadam">Ātmanepada</option>
+                <option value="karmaRi">Karmaṇi (Passive)</option>
+            </select>
+            <button id="btnGenerate">Generate</button>
+        </div>
+    </div>
+
+    <div id="resultsContainer"></div>
+    <button id="jsonBtn" class="toggle-json" style="display: none;">Show Raw JSON</button>
+    <pre id="rawJson"></pre>
+
+    <script type="module" src="/main.js"></script>
+</body>
+</html>
