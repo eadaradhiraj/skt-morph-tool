@@ -48,34 +48,38 @@
         <button class="tab-btn" id="btnGenNounTab">Gen Nouns</button>
     </div>
 
-    <!-- TAB 1: ANALYZER -->
     <div id="analyzeTab" class="tab-content active">
         <div class="search-row"><input type="text" id="analyzeInput" placeholder="Word (e.g. prakaroti)" autocomplete="off" spellcheck="false" style="max-width: 400px;" /><button id="runAnalyzerBtn">Analyze</button></div>
     </div>
 
-    <!-- TAB 2: GEN VERBS -->
     <div id="genVerbTab" class="tab-content">
         <div class="search-row">
-            <input type="text" id="gvRoot" placeholder="Root (e.g. kf)" style="max-width: 120px;" />
+            <input type="text" id="gvRoot" placeholder="Root/ID (e.g. kf)" style="max-width: 120px;" />
             <input type="text" id="gvUpa" placeholder="Prefix (e.g. pra)" style="max-width: 120px;" />
+            <select id="gvDerivative">
+                <option value="base">Primary</option><option value="Rijanta">Causative</option><option value="sannanta">Desiderative</option><option value="yaNanta">Intensive</option>
+            </select>
             <select id="gvLakara">
-                <option value="law">Laṭ (Present)</option><option value="low">Loṭ (Imperative)</option><option value="laN">Laṅ (Imperfect)</option><option value="viDiliN">Vidhi Liṅ (Optative)</option><option value="lfw">Lṛṭ (Future)</option><option value="liw">Liṭ (Perfect)</option><option value="luw">Luṭ (Periphrastic)</option><option value="ASIrliN">Āśīr Liṅ (Benedict)</option><option value="luN">Luṅ (Aorist)</option>
+                <option value="law">Laṭ (Pres)</option><option value="low">Loṭ (Imp)</option><option value="laN">Laṅ (Impf)</option><option value="viDiliN">Vidhi Liṅ (Opt)</option><option value="lfw">Lṛṭ (Fut)</option><option value="liw">Liṭ (Perf)</option><option value="luw">Luṭ (Peri Fut)</option><option value="ASIrliN">Āśīr Liṅ (Ben)</option><option value="luN">Luṅ (Aor)</option>
             </select>
         </div>
         <div class="search-row">
             <select id="gvPurusha"><option value="praTama">3rd Person</option><option value="maDyama">2nd Person</option><option value="uttama">1st Person</option></select>
-            <select id="gvVoice"><option value="parasmEpadam">Parasmaipada</option><option value="Atmanepadam">Ātmanepada</option><option value="karmaRi">Passive</option></select>
+            <select id="gvVoice"><option value="parasmEpadam">Parasmaipada</option><option value="Atmanepadam">Ātmanepada</option></select>
+            <select id="gvPrayoga"><option value="kartari">Active</option><option value="karmaRi">Passive</option><option value="Bave">Impersonal</option></select>
             <button id="runGenVerbBtn">Generate</button>
         </div>
     </div>
 
-    <!-- TAB 3: GEN PARTICIPLES -->
     <div id="genPartTab" class="tab-content">
         <div class="search-row">
-            <input type="text" id="gpRoot" placeholder="Root (e.g. kf)" style="max-width: 120px;" />
+            <input type="text" id="gpRoot" placeholder="Root/ID (e.g. kf)" style="max-width: 120px;" />
             <input type="text" id="gpUpa" placeholder="Prefix (e.g. pra)" style="max-width: 120px;" />
+            <select id="gpDerivative">
+                <option value="base">Primary</option><option value="Rijanta">Causative</option><option value="sannanta">Desiderative</option><option value="yaNanta">Intensive</option>
+            </select>
             <select id="gpPratyaya">
-                <option value="Sotf">Śatṛ (Present Par.)</option><option value="SAnac">Śānac (Present Atm.)</option><option value="kta">Kta (Past Pass.)</option><option value="ktavatu">Ktavat (Past Act.)</option><option value="tfc">Tṛc (Noun of Agency)</option><option value="tumun">Tumun (Infinitive)</option><option value="ktvA">Ktvā (Gerund)</option><option value="lyap">Lyap (Prefixed Gerund)</option>
+                <option value="Sotf">Śatṛ</option><option value="SAnac">Śānac</option><option value="kta">Kta</option><option value="ktavatu">Ktavat</option><option value="tfc">Tṛc</option><option value="tumun">Tumun</option><option value="ktvA">Ktvā</option><option value="lyap">Lyap</option>
             </select>
         </div>
         <div class="search-row">
@@ -84,7 +88,6 @@
         </div>
     </div>
 
-    <!-- TAB 4: GEN NOUNS -->
     <div id="genNounTab" class="tab-content">
         <div class="search-row">
             <input type="text" id="gnBase" placeholder="Base noun (e.g. rAjan)" style="max-width: 250px;" />
@@ -97,141 +100,6 @@
     <button id="jsonBtn" class="toggle-json" style="display: none;">Show Raw JSON</button>
     <pre id="rawJson"></pre>
 
-    <script type="module">
-        import Sanscript from '@indic-transliteration/sanscript';
-
-        const inScript = document.getElementById('inputScript');
-        const outScript = document.getElementById('outputScript');
-        const container = document.getElementById('resultsContainer');
-        const rawJson = document.getElementById('rawJson');
-        const jsonBtn = document.getElementById('jsonBtn');
-
-        document.getElementById('btnAnalyzeTab').addEventListener('click', (e) => switchTab('analyzeTab', e.target));
-        document.getElementById('btnGenVerbTab').addEventListener('click', (e) => switchTab('genVerbTab', e.target));
-        document.getElementById('btnGenPartTab').addEventListener('click', (e) => switchTab('genPartTab', e.target));
-        document.getElementById('btnGenNounTab').addEventListener('click', (e) => switchTab('genNounTab', e.target));
-
-        function switchTab(tabId, btnTarget) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            btnTarget.classList.add('active');
-            container.innerHTML = ''; jsonBtn.style.display = 'none'; rawJson.style.display = 'none';
-        }
-
-        jsonBtn.addEventListener('click', () => { rawJson.style.display = rawJson.style.display === 'none' ? 'block' : 'none'; });
-
-        document.querySelectorAll('input').forEach(inp => {
-            inp.addEventListener('input', () => { if (/[\u0900-\u097F]/.test(inp.value)) inScript.value = 'devanagari'; });
-        });
-
-        function norm(word) {
-            if (!word) return word;
-            return inScript.value === 'slp1' ? word : Sanscript.t(word, inScript.value, 'slp1');
-        }
-
-        function out(text, col) {
-            if (!text || text === '-') return '-';
-            if (['Dhatu ID'].includes(col)) return text;
-            if (/^[0-9.]+$/.test(text)) return text;
-            const rawTags = ['masc', 'fem', 'neut', 'eka', 'dvi', 'bahu', 'masc/fem', 'masc/neut', 'masc/fem/neut', 'any'];
-            return text.split(' ').map(w => rawTags.includes(w.toLowerCase()) ? w : Sanscript.t(w, 'slp1', outScript.value)).join(' ');
-        }
-
-        function buildTable(title, cols, rows) {
-            if (!rows || rows.length === 0) return '';
-            let html = `<h2 class="category-title">${title}</h2><table><thead><tr>`;
-            cols.forEach(c => html += `<th>${c}</th>`);
-            html += `</tr></thead><tbody>`;
-            rows.forEach(r => {
-                html += `<tr>`;
-                cols.forEach(c => html += `<td>${out(r[c.toLowerCase().replace(' ', '_')] || r[c] || '-', c)}</td>`);
-                html += `</tr>`;
-            });
-            return html + `</tbody></table>`;
-        }
-
-        function buildDeclensionGrid(title, declensions) {
-            const cases = ['prathama', 'dvitiya', 'tritiya', 'caturthi', 'panchami', 'sasthi', 'saptami', 'sambodhana'];
-            let html = `<h2 class="category-title">${title}</h2><table><thead><tr><th>Case</th><th>Eka</th><th>Dvi</th><th>Bahu</th></tr></thead><tbody>`;
-            cases.forEach(c => {
-                if(declensions[c]) {
-                    html += `<tr><td>${c.charAt(0).toUpperCase() + c.slice(1)}</td><td>${out(declensions[c][0])}</td><td>${out(declensions[c][1])}</td><td>${out(declensions[c][2])}</td></tr>`;
-                }
-            });
-            return html + `</tbody></table>`;
-        }
-
-        async function fetchAPI(url) {
-            container.innerHTML = "<p style='text-align:center;'>Querying...</p>";
-            document.body.classList.add('loading');
-            jsonBtn.style.display = 'none'; rawJson.style.display = 'none';
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                rawJson.innerText = JSON.stringify(data, null, 2);
-                return data;
-            } catch (err) {
-                container.innerHTML = `<div class='error-msg'>Server Error: ${err.message}</div>`;
-                throw err;
-            } finally { document.body.classList.remove('loading'); }
-        }
-
-        document.getElementById('runAnalyzerBtn').addEventListener('click', async () => {
-            const rawWord = document.getElementById('analyzeInput').value.trim();
-            if (!rawWord) return;
-            const data = await fetchAPI(`/api/analyze/${norm(rawWord)}`);
-            if (!data) return;
-            let html = buildTable('Verbs (Tiṅanta)', ['Dhatu ID', 'Upasarga', 'Lakara', 'Purusha', 'Vacana', 'Voice'], data.verbs);
-            html += buildTable('Declensions (Subanta)', ['Base Form', 'Dhatu ID', 'Upasarga', 'Pratyaya', 'Gender', 'Case', 'Vacana'], data.declensions);
-            html += buildTable('Participles / Avyayas', ['Base Form', 'Pratyaya', 'Dhatu ID', 'Upasarga'], data.participles);
-            html += buildTable('Pronouns', ['Base Form', 'Gender', 'Case', 'Vacana'], data.pronouns);
-            html += buildTable('Numerals', ['Base Form', 'Gender', 'Case', 'Vacana'], data.numerals);
-            html += buildTable('Irregular Nouns', ['Base Form', 'Gender', 'Case', 'Vacana'], data.irregulars);
-            container.innerHTML = html || `<div class='error-msg'>No matches found.</div>`;
-            if(html) jsonBtn.style.display = 'block';
-        });
-
-        document.getElementById('runGenVerbBtn').addEventListener('click', async () => {
-            const r = norm(document.getElementById('gvRoot').value.trim());
-            const p = new URLSearchParams({ root: r, upasarga: norm(document.getElementById('gvUpa').value.trim()), lakara: document.getElementById('gvLakara').value, purusha: document.getElementById('gvPurusha').value, voice: document.getElementById('gvVoice').value });
-            if (!r) return alert("Please enter a root.");
-            const data = await fetchAPI(`/api/generate/verb?${p}`);
-            if (data.error) { container.innerHTML = `<div class='error-msg'>${data.error}</div>`; return; }
-            container.innerHTML = buildTable('Generated Verb', ['Eka', 'Dvi', 'Bahu'], [data]);
-            jsonBtn.style.display = 'block';
-        });
-
-        document.getElementById('runGenPartBtn').addEventListener('click', async () => {
-            const r = norm(document.getElementById('gpRoot').value.trim());
-            const p = new URLSearchParams({ root: r, upasarga: norm(document.getElementById('gpUpa').value.trim()), pratyaya: document.getElementById('gpPratyaya').value, gender: document.getElementById('gpGender').value });
-            if (!r) return alert("Please enter a root.");
-            const data = await fetchAPI(`/api/generate/participle?${p}`);
-            if (data.error) { container.innerHTML = `<div class='error-msg'>${data.error}</div>`; return; }
-            if (data.type === 'avyaya') { container.innerHTML = buildTable('Generated Avyaya', ['Base Form'], [data]); } 
-            else { container.innerHTML = buildDeclensionGrid(`Declension: ${out(data.base_form)} (${data.declensions ? 'Found' : 'Error'})`, data.declensions); }
-            jsonBtn.style.display = 'block';
-        });
-
-        document.getElementById('runGenNounBtn').addEventListener('click', async () => {
-            const b = norm(document.getElementById('gnBase').value.trim());
-            const p = new URLSearchParams({ base: b, gender: document.getElementById('gnGender').value });
-            if (!b) return alert("Please enter a base noun.");
-            const data = await fetchAPI(`/api/generate/declension?${p}`);
-            if (data.error) { container.innerHTML = `<div class='error-msg'>${data.error}</div>`; return; }
-            container.innerHTML = buildDeclensionGrid(`Declension: ${out(b)}`, data.declensions);
-            jsonBtn.style.display = 'block';
-        });
-
-        outScript.addEventListener('change', () => { 
-            const active = document.querySelector('.tab-btn.active').id;
-            if (container.innerHTML && !container.innerHTML.includes('No matches') && !container.innerHTML.includes('Error')) {
-                if (active === 'btnAnalyzeTab') document.getElementById('runAnalyzerBtn').click();
-                if (active === 'btnGenVerbTab') document.getElementById('runGenVerbBtn').click();
-                if (active === 'btnGenPartTab') document.getElementById('runGenPartBtn').click();
-                if (active === 'btnGenNounTab') document.getElementById('runGenNounBtn').click();
-            }
-        });
-    </script>
+    <script type="module" src="/main.js"></script>
 </body>
 </html>
