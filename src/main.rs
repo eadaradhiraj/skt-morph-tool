@@ -10,11 +10,15 @@ mod engine;
 struct AppState { pool: Pool }
 
 #[derive(Deserialize)]
+struct AnalyzeQuery { #[serde(default = "d_page")] page: i64 }
+#[derive(Deserialize)]
 struct VerbQuery { root: String, #[serde(default)] upasarga: String, lakara: String, purusha: String, voice: String, prayoga: String, derivative: String }
 #[derive(Deserialize)]
 struct ParticipleQuery { root: String, #[serde(default)] upasarga: String, pratyaya: String, gender: String, derivative: String }
 #[derive(Deserialize)]
 struct DeclensionQuery { base: String, gender: String }
+
+fn d_page() -> i64 { 1 }
 
 #[tokio::main]
 async fn main() {
@@ -27,7 +31,7 @@ async fn main() {
     axum::serve(tokio::net::TcpListener::bind(&addr).await.unwrap(), app).await.unwrap();
 }
 
-async fn analyze_word(Path(word): Path<String>, State(state): State<Arc<AppState>>) -> Json<Value> { Json(engine::analyzer::analyze(&word, &state.pool).await) }
+async fn analyze_word(Path(word): Path<String>, Query(q): Query<AnalyzeQuery>, State(state): State<Arc<AppState>>) -> Json<Value> { Json(engine::analyzer::analyze(&word, q.page, &state.pool).await) }
 async fn gen_verb(Query(p): Query<VerbQuery>, State(s): State<Arc<AppState>>) -> Json<Value> { Json(engine::generator::generate_verb(&s.pool, &p.root, &p.upasarga, &p.lakara, &p.purusha, &p.voice, &p.prayoga, &p.derivative).await) }
 async fn gen_participle(Query(p): Query<ParticipleQuery>, State(s): State<Arc<AppState>>) -> Json<Value> { Json(engine::generator::generate_participle(&s.pool, &p.root, &p.upasarga, &p.pratyaya, &p.gender, &p.derivative).await) }
 async fn gen_declension(Query(p): Query<DeclensionQuery>) -> Json<Value> { Json(engine::generator::generate_declension(&p.base, &p.gender)) }

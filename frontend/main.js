@@ -1,10 +1,14 @@
 import Sanscript from '@indic-transliteration/sanscript';
 
+const input = document.getElementById('analyzeInput');
 const inScript = document.getElementById('inputScript');
 const outScript = document.getElementById('outputScript');
 const container = document.getElementById('resultsContainer');
 const rawJson = document.getElementById('rawJson');
 const jsonBtn = document.getElementById('jsonBtn');
+
+let currentPage = 1;
+let currentWord = "";
 
 document.getElementById('btnAnalyzeTab').addEventListener('click', (e) => switchTab('analyzeTab', e.target));
 document.getElementById('btnGenVerbTab').addEventListener('click', (e) => switchTab('genVerbTab', e.target));
@@ -62,8 +66,8 @@ function buildDeclensionGrid(title, declensions) {
     return html + `</tbody></table>`;
 }
 
-async function fetchAPI(url) {
-    container.innerHTML = "<p style='text-align:center;'>Querying...</p>";
+async function fetchAPI(url, isPagination = false) {
+    if(!isPagination) { container.innerHTML = "<p style='text-align:center;'>Querying...</p>"; }
     document.body.classList.add('loading');
     jsonBtn.style.display = 'none'; rawJson.style.display = 'none';
     try {
@@ -77,33 +81,51 @@ async function fetchAPI(url) {
     } finally { document.body.classList.remove('loading'); }
 }
 
-document.getElementById('runAnalyzerBtn').addEventListener('click', async () => {
-    const rawWord = document.getElementById('analyzeInput').value.trim();
+async function runAnalyzer(page = 1) {
+    const rawWord = input.value.trim();
     if (!rawWord) return;
-    const data = await fetchAPI(`/api/analyze/${norm(rawWord)}`);
+    
+    currentWord = norm(rawWord);
+    currentPage = page;
+    
+    const data = await fetchAPI(`/api/analyze/${currentWord}?page=${currentPage}`, page > 1);
     if (!data) return;
-    let html = buildTable('Verbs (Tiṅanta)', ['Dhatu ID', 'Upasarga', 'Lakara', 'Purusha', 'Vacana', 'Voice'], data.verbs);
+
+    let html = '';
+    html += buildTable('Verbs (Tiṅanta)', ['Dhatu ID', 'Upasarga', 'Lakara', 'Purusha', 'Vacana', 'Voice'], data.verbs);
     html += buildTable('Declensions (Subanta)', ['Base Form', 'Dhatu ID', 'Upasarga', 'Pratyaya', 'Gender', 'Case', 'Vacana'], data.declensions);
     html += buildTable('Participles / Avyayas', ['Base Form', 'Pratyaya', 'Dhatu ID', 'Upasarga'], data.participles);
     html += buildTable('Pronouns', ['Base Form', 'Gender', 'Case', 'Vacana'], data.pronouns);
     html += buildTable('Numerals', ['Base Form', 'Gender', 'Case', 'Vacana'], data.numerals);
     html += buildTable('Irregular Nouns', ['Base Form', 'Gender', 'Case', 'Vacana'], data.irregulars);
-    container.innerHTML = html || `<div class='error-msg'>No matches found.</div>`;
-    if(html) jsonBtn.style.display = 'block';
-});
+    html += buildTable('Namadhatus', ['Base Noun', 'Pratyaya', 'Meaning Hint'], data.namadhatus);
+
+    if (!html) {
+        if (page === 1) container.innerHTML = `<div class='error-msg'>No matches found.</div>`;
+        else alert("No more results.");
+        return;
+    }
+
+    if (page === 1) container.innerHTML = html;
+    else container.innerHTML += html; // Append to existing table
+
+    const oldBtn = document.getElementById('loadMoreBtn');
+    if (oldBtn) oldBtn.remove();
+    
+    if (data.has_more) {
+        container.innerHTML += `<div style="text-align:center; margin-top:2rem;"><button id="loadMoreBtn" style="background:#3b82f6;">Load More Results</button></div>`;
+        document.getElementById('loadMoreBtn').addEventListener('click', () => runAnalyzer(currentPage + 1));
+    }
+
+    jsonBtn.style.display = 'block';
+}
+
+document.getElementById('runAnalyzerBtn').addEventListener('click', () => runAnalyzer(1));
 
 document.getElementById('runGenVerbBtn').addEventListener('click', async () => {
     const r = norm(document.getElementById('gvRoot').value.trim());
+    const p = new URLSearchParams({ root: r, upasarga: norm(document.getElementById('gvUpa').value.trim()), lakara: document.getElementById('gvLakara').value, purusha: document.getElementById('gvPurusha').value, voice: document.getElementById('gvVoice').value, prayoga: document.getElementById('gvPrayoga').value, derivative: document.getElementById('gvDerivative').value });
     if (!r) return alert("Please enter a root.");
-    const p = new URLSearchParams({ 
-        root: r, 
-        upasarga: norm(document.getElementById('gvUpa').value.trim()), 
-        lakara: document.getElementById('gvLakara').value, 
-        purusha: document.getElementById('gvPurusha').value, 
-        voice: document.getElementById('gvVoice').value,
-        prayoga: document.getElementById('gvPrayoga').value,
-        derivative: document.getElementById('gvDerivative').value
-    });
     const data = await fetchAPI(`/api/generate/verb?${p}`);
     if (data.error) { container.innerHTML = `<div class='error-msg'>${data.error}</div>`; return; }
     container.innerHTML = buildTable('Generated Verb', ['Eka', 'Dvi', 'Bahu'], [data]);
@@ -112,14 +134,8 @@ document.getElementById('runGenVerbBtn').addEventListener('click', async () => {
 
 document.getElementById('runGenPartBtn').addEventListener('click', async () => {
     const r = norm(document.getElementById('gpRoot').value.trim());
+    const p = new URLSearchParams({ root: r, upasarga: norm(document.getElementById('gpUpa').value.trim()), pratyaya: document.getElementById('gpPratyaya').value, gender: document.getElementById('gpGender').value, derivative: document.getElementById('gpDerivative').value });
     if (!r) return alert("Please enter a root.");
-    const p = new URLSearchParams({ 
-        root: r, 
-        upasarga: norm(document.getElementById('gpUpa').value.trim()), 
-        pratyaya: document.getElementById('gpPratyaya').value, 
-        gender: document.getElementById('gpGender').value,
-        derivative: document.getElementById('gpDerivative').value 
-    });
     const data = await fetchAPI(`/api/generate/participle?${p}`);
     if (data.error) { container.innerHTML = `<div class='error-msg'>${data.error}</div>`; return; }
     if (data.type === 'avyaya') { container.innerHTML = buildTable('Generated Avyaya', ['Base Form'], [data]); } 
@@ -129,26 +145,13 @@ document.getElementById('runGenPartBtn').addEventListener('click', async () => {
 
 document.getElementById('runGenNounBtn').addEventListener('click', async () => {
     const b = norm(document.getElementById('gnBase').value.trim());
-    if (!b) return alert("Please enter a base noun.");
     const p = new URLSearchParams({ base: b, gender: document.getElementById('gnGender').value });
+    if (!b) return alert("Please enter a base noun.");
     const data = await fetchAPI(`/api/generate/declension?${p}`);
     if (data.error) { container.innerHTML = `<div class='error-msg'>${data.error}</div>`; return; }
     container.innerHTML = buildDeclensionGrid(`Declension: ${out(b)}`, data.declensions);
     jsonBtn.style.display = 'block';
 });
 
-// Event listeners for enter key
-document.getElementById('analyzeInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') document.getElementById('runAnalyzerBtn').click(); });
-document.getElementById('gvRoot').addEventListener('keypress', (e) => { if (e.key === 'Enter') document.getElementById('runGenVerbBtn').click(); });
-document.getElementById('gpRoot').addEventListener('keypress', (e) => { if (e.key === 'Enter') document.getElementById('runGenPartBtn').click(); });
-document.getElementById('gnBase').addEventListener('keypress', (e) => { if (e.key === 'Enter') document.getElementById('runGenNounBtn').click(); });
-
-outScript.addEventListener('change', () => { 
-    const active = document.querySelector('.tab-btn.active').id;
-    if (container.innerHTML && !container.innerHTML.includes('No matches') && !container.innerHTML.includes('Error')) {
-        if (active === 'btnAnalyzeTab') document.getElementById('runAnalyzerBtn').click();
-        if (active === 'btnGenVerbTab') document.getElementById('runGenVerbBtn').click();
-        if (active === 'btnGenPartTab') document.getElementById('runGenPartBtn').click();
-        if (active === 'btnGenNounTab') document.getElementById('runGenNounBtn').click();
-    }
-});
+document.getElementById('analyzeInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') runAnalyzer(1); });
+outScript.addEventListener('change', () => { if (container.innerHTML && !container.innerHTML.includes('No matches') && !container.innerHTML.includes('Error')) runAnalyzer(1); });
