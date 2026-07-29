@@ -7,14 +7,20 @@ use super::numerals::analyze_numeral;
 use super::irregulars::analyze_irregular;
 use super::namadhatu::analyze_namadhatu;
 
-fn strip_accents(word: &str) -> String { word.replace(&['/', '\\', '^'][..], "") }
+fn strip_accents(word: &str) -> String { 
+    word.replace(&['/', '\\', '^'][..], "").trim().to_string() 
+}
+
+// FORGIVING MATCHER
 fn exact_match(row_val: &str, word: &str) -> bool {
     let clean_word = strip_accents(word);
-    row_val.split(',').map(|s| strip_accents(s.trim())).any(|s| s == clean_word)
+    row_val.split(',')
+        .map(|s| strip_accents(s))
+        .any(|s| s == clean_word || s.contains(&clean_word)) // Fallback to contains if invisible chars exist
 }
 
 fn is_valid_participle(conn: &rusqlite::Connection, dhatu_id: &str, upasarga: &str, pratyaya: &str) -> bool {
-    if pratyaya == "lyap" && upasarga.is_empty() { return false; }
+    if pratyaya == "lyap" && upasarga.trim().is_empty() { return false; }
     let atmanepada_pratyayas = ["SAnac", "cAnaS", "sya-SAnac", "BAvakarma-SAnac", "sya-BAvakarma-SAnac"];
     if atmanepada_pratyayas.contains(&pratyaya) {
         let mut stmt = conn.prepare("SELECT 1 FROM conjugations WHERE dhatu_id = ?1 AND upasarga = ?2 AND voice = 'Atmanepadam' LIMIT 1").unwrap();
@@ -26,11 +32,12 @@ fn is_valid_participle(conn: &rusqlite::Connection, dhatu_id: &str, upasarga: &s
 
 // ================== VERBS ==================
 async fn fetch_verbs(word: String, page: i64, pool: &Pool) -> Vec<Value> {
-    let word_clone = word.clone();
+    let word_clone = strip_accents(&word);
     let offset = (page - 1) * 50;
     pool.get().await.unwrap().interact(move |conn| {
         let mut res = Vec::new();
-        let search_term = format!("%{}%", strip_accents(&word_clone).chars().map(|c| format!("{}%", c)).collect::<String>());
+        // Just use standard LIKE %word%
+        let search_term = format!("%{}%", word_clone);
         
         let mut stmt = conn.prepare("SELECT dhatu_id, upasarga, derivative, prayoga, lakara, voice, purusha, eka, dvi, bahu FROM conjugations WHERE eka LIKE ?1 OR dvi LIKE ?1 OR bahu LIKE ?1 LIMIT 50 OFFSET ?2").unwrap();
         let mut rows = stmt.query(rusqlite::params![search_term, offset]).unwrap();
@@ -71,11 +78,11 @@ async fn analyze_verb(word: &str, page: i64, pool: &Pool) -> Vec<Value> {
 
 // ================== PARTICIPLES ==================
 async fn fetch_participles(word: String, page: i64, pool: &Pool) -> Vec<Value> {
-    let word_clone = word.clone();
+    let word_clone = strip_accents(&word);
     let offset = (page - 1) * 50;
     pool.get().await.unwrap().interact(move |conn| {
         let mut res = Vec::new();
-        let search_term = format!("%{}%", strip_accents(&word_clone).chars().map(|c| format!("{}%", c)).collect::<String>());
+        let search_term = format!("%{}%", word_clone);
         
         let mut stmt = conn.prepare("SELECT dhatu_id, upasarga, derivative, pratyaya, base_form, masculine, feminine, neuter FROM participles WHERE base_form LIKE ?1 OR masculine LIKE ?1 OR feminine LIKE ?1 OR neuter LIKE ?1 LIMIT 50 OFFSET ?2").unwrap();
         let mut rows = stmt.query(rusqlite::params![search_term, offset]).unwrap();
@@ -202,7 +209,6 @@ pub async fn analyze(word: &str, page: i64, pool: &Pool) -> Value {
     let participles = analyze_participle(word, page, pool).await;
     let declensions = analyze_declension(word, page, pool).await;
     
-    // We don't paginate irregulars, numerals, or pronouns as they are tiny static lists
     let (pronouns, numerals, irregulars, namadhatus) = if page == 1 {
         (analyze_pronoun(word, pool).await, analyze_numeral(word, pool).await, analyze_irregular(word, pool).await, analyze_namadhatu(word))
     } else {
