@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>skt-morph | Sanskrit Engine</title>
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; background-color: #121212; color: #ffffff; max-width: 900px; margin: 0 auto; padding: 2rem; }
+        body { font-family: system-ui, -apple-system, sans-serif; background-color: #121212; color: #ffffff; max-width: 1000px; margin: 0 auto; padding: 2rem; }
         h1 { color: #f59e0b; text-align: center; margin-bottom: 0.5rem; }
         p.subtitle { text-align: center; color: #a1a1aa; margin-bottom: 2rem; }
         .controls { display: flex; gap: 10px; margin-bottom: 1.5rem; justify-content: center; flex-wrap: wrap; border-bottom: 1px solid #333; padding-bottom: 1.5rem; }
@@ -43,15 +43,23 @@
 
     <div class="tabs">
         <button class="tab-btn active" id="btnAnalyzeTab">Analyzer</button>
+        <button class="tab-btn" id="btnDhatuTab">Dhātu Finder</button>
         <button class="tab-btn" id="btnGenVerbTab">Gen Verbs</button>
         <button class="tab-btn" id="btnGenPartTab">Gen Participles</button>
         <button class="tab-btn" id="btnGenNounTab">Gen Nouns</button>
     </div>
 
+    <!-- TAB 1: ANALYZER -->
     <div id="analyzeTab" class="tab-content active">
         <div class="search-row"><input type="text" id="analyzeInput" placeholder="Word (e.g. prakaroti)" autocomplete="off" spellcheck="false" style="max-width: 400px;" /><button id="runAnalyzerBtn">Analyze</button></div>
     </div>
 
+    <!-- TAB 2: DHATU FINDER -->
+    <div id="dhatuTab" class="tab-content">
+        <div class="search-row"><input type="text" id="dhatuInput" placeholder="Search Form or Meaning (e.g. Adara, to go)" autocomplete="off" spellcheck="false" style="max-width: 400px;" /><button id="runDhatuBtn">Search Roots</button></div>
+    </div>
+
+    <!-- TAB 3: GEN VERBS -->
     <div id="genVerbTab" class="tab-content">
         <div class="search-row">
             <input type="text" id="gvRoot" placeholder="Root/ID (e.g. kf)" style="max-width: 120px;" />
@@ -71,6 +79,7 @@
         </div>
     </div>
 
+    <!-- TAB 4: GEN PARTICIPLES -->
     <div id="genPartTab" class="tab-content">
         <div class="search-row">
             <input type="text" id="gpRoot" placeholder="Root/ID (e.g. kf)" style="max-width: 120px;" />
@@ -79,7 +88,7 @@
                 <option value="base">Primary</option><option value="Rijanta">Causative</option><option value="sannanta">Desiderative</option><option value="yaNanta">Intensive</option>
             </select>
             <select id="gpPratyaya">
-                <option value="Sotf">Śatṛ</option><option value="SAnac">Śānac</option><option value="kta">Kta</option><option value="ktavatu">Ktavat</option><option value="tfc">Tṛc</option><option value="tumun">Tumun</option><option value="ktvA">Ktvā</option><option value="lyap">Lyap</option>
+                <option value="Sotf">Śatṛ</option><option value="SAnac">Śānac</option><option value="kta">Kta</option><option value="ktavatu">Ktavat</option><option value="tfc">Tṛc</option><option value="tumun">Tumun</option><option value="ktvA">Ktvā</option><option value="lyap">Lyap</option><option value="ap">Ap (e.g. Adara)</option><option value="ac">Ac</option>
             </select>
         </div>
         <div class="search-row">
@@ -88,6 +97,7 @@
         </div>
     </div>
 
+    <!-- TAB 5: GEN NOUNS -->
     <div id="genNounTab" class="tab-content">
         <div class="search-row">
             <input type="text" id="gnBase" placeholder="Base noun (e.g. rAjan)" style="max-width: 250px;" />

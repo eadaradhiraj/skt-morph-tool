@@ -7,3 +7,4 @@ pub mod irregulars;
 pub mod namadhatu;
 pub mod declension;
 pub mod generator;
+pub mod dhatu;

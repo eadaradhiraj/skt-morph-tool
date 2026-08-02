@@ -1,13 +1,15 @@
 import Sanscript from '@indic-transliteration/sanscript';
 
-const input = document.getElementById('analyzeInput');
 const inScript = document.getElementById('inputScript');
 const outScript = document.getElementById('outputScript');
 const container = document.getElementById('resultsContainer');
 const rawJson = document.getElementById('rawJson');
 const jsonBtn = document.getElementById('jsonBtn');
 
+let currentPage = 1; let currentWord = "";
+
 document.getElementById('btnAnalyzeTab').addEventListener('click', (e) => switchTab('analyzeTab', e.target));
+document.getElementById('btnDhatuTab').addEventListener('click', (e) => switchTab('dhatuTab', e.target));
 document.getElementById('btnGenVerbTab').addEventListener('click', (e) => switchTab('genVerbTab', e.target));
 document.getElementById('btnGenPartTab').addEventListener('click', (e) => switchTab('genPartTab', e.target));
 document.getElementById('btnGenNounTab').addEventListener('click', (e) => switchTab('genNounTab', e.target));
@@ -37,6 +39,10 @@ function out(text, col) {
     if (!text || text === '-') return '-';
     if (['Dhatu ID'].includes(col)) return text;
     if (/^[0-9.]+$/.test(text)) return text;
+    
+    // Protect Hindi/English meanings from transliteration mangling
+    if (['Meaning'].includes(col) || /[\u0900-\u097F]/.test(text)) return text;
+
     const rawTags = ['masc', 'fem', 'neut', 'eka', 'dvi', 'bahu', 'masc/fem', 'masc/neut', 'masc/fem/neut', 'any'];
     return text.split(' ').map(w => rawTags.includes(w.toLowerCase()) ? w : Sanscript.t(w, 'slp1', outScript.value)).join(' ');
 }
@@ -65,8 +71,8 @@ function buildDeclensionGrid(title, declensions) {
     return html + `</tbody></table>`;
 }
 
-async function fetchAPI(url) {
-    container.innerHTML = "<p style='text-align:center;'>Querying...</p>";
+async function fetchAPI(url, isPagination = false) {
+    if(!isPagination) { container.innerHTML = "<p style='text-align:center;'>Querying...</p>"; }
     document.body.classList.add('loading');
     jsonBtn.style.display = 'none'; rawJson.style.display = 'none';
     try {
@@ -80,21 +86,57 @@ async function fetchAPI(url) {
     } finally { document.body.classList.remove('loading'); }
 }
 
-document.getElementById('runAnalyzerBtn').addEventListener('click', async () => {
-    const rawWord = input.value.trim();
+async function runAnalyzer(page = 1) {
+    const rawWord = document.getElementById('analyzeInput').value.trim();
     if (!rawWord) return;
-    const data = await fetchAPI(`/api/analyze/${norm(rawWord)}`);
+    currentWord = norm(rawWord); currentPage = page;
+    const data = await fetchAPI(`/api/analyze/${currentWord}?page=${currentPage}`, page > 1);
     if (!data) return;
-    let html = buildTable('Verbs (Tiṅanta)', ['Dhatu ID', 'Upasarga', 'Lakara', 'Purusha', 'Vacana', 'Voice'], data.verbs);
+
+    let html = '';
+    html += buildTable('Verbs (Tiṅanta)', ['Dhatu ID', 'Upasarga', 'Lakara', 'Purusha', 'Vacana', 'Voice'], data.verbs);
     html += buildTable('Declensions (Subanta)', ['Base Form', 'Dhatu ID', 'Upasarga', 'Pratyaya', 'Gender', 'Case', 'Vacana'], data.declensions);
     html += buildTable('Participles / Avyayas', ['Base Form', 'Pratyaya', 'Dhatu ID', 'Upasarga'], data.participles);
     html += buildTable('Pronouns', ['Base Form', 'Gender', 'Case', 'Vacana'], data.pronouns);
     html += buildTable('Numerals', ['Base Form', 'Gender', 'Case', 'Vacana'], data.numerals);
     html += buildTable('Irregular Nouns', ['Base Form', 'Gender', 'Case', 'Vacana'], data.irregulars);
     html += buildTable('Namadhatus', ['Base Noun', 'Pratyaya', 'Meaning Hint'], data.namadhatus);
-    container.innerHTML = html || `<div class='error-msg'>No matches found for "${rawWord}".</div>`;
-    if(html) jsonBtn.style.display = 'block';
-});
+
+    if (!html) {
+        if (page === 1) container.innerHTML = `<div class='error-msg'>No matches found for "${rawWord}".</div>`;
+        else alert("No more results.");
+        return;
+    }
+
+    if (page === 1) container.innerHTML = html;
+    else container.innerHTML += html; 
+
+    const oldBtn = document.getElementById('loadMoreBtn');
+    if (oldBtn) oldBtn.remove();
+    
+    if (data.has_more) {
+        container.innerHTML += `<div style="text-align:center; margin-top:2rem;"><button id="loadMoreBtn" style="background:#3b82f6; padding:10px 20px; color:white; border:none; border-radius:8px; cursor:pointer;">Load More Results</button></div>`;
+        document.getElementById('loadMoreBtn').addEventListener('click', () => runAnalyzer(currentPage + 1));
+    }
+    jsonBtn.style.display = 'block';
+}
+
+async function runDhatuSearch() {
+    const rawWord = document.getElementById('dhatuInput').value.trim();
+    if (!rawWord) return;
+    const query = norm(rawWord);
+    const data = await fetchAPI(`/api/dhatus/${query}`);
+    if (!data || data.length === 0) { container.innerHTML = `<div class='error-msg'>No Dhātus found matching "${rawWord}".</div>`; return; }
+    
+    // Sort so exact matches or specific roots appear first
+    data.sort((a,b) => a.dhatu_id.localeCompare(b.dhatu_id));
+
+    container.innerHTML = buildTable('Dhātu Results', ['Dhatu ID', 'Root', 'Gana', 'Meaning', 'Upasarga', 'Pratyaya', 'Base Form'], data);
+    jsonBtn.style.display = 'block';
+}
+
+document.getElementById('runAnalyzerBtn').addEventListener('click', () => runAnalyzer(1));
+document.getElementById('runDhatuBtn').addEventListener('click', runDhatuSearch);
 
 document.getElementById('runGenVerbBtn').addEventListener('click', async () => {
     const r = norm(document.getElementById('gvRoot').value.trim());
@@ -127,5 +169,12 @@ document.getElementById('runGenNounBtn').addEventListener('click', async () => {
     jsonBtn.style.display = 'block';
 });
 
-document.getElementById('analyzeInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') document.getElementById('runAnalyzerBtn').click(); });
-outScript.addEventListener('change', () => { if (container.innerHTML && !container.innerHTML.includes('No matches') && !container.innerHTML.includes('Error')) document.getElementById('runAnalyzerBtn').click(); });
+document.getElementById('analyzeInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') runAnalyzer(1); });
+document.getElementById('dhatuInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') runDhatuSearch(); });
+outScript.addEventListener('change', () => { 
+    const active = document.querySelector('.tab-btn.active').id;
+    if (container.innerHTML && !container.innerHTML.includes('No matches') && !container.innerHTML.includes('Error')) {
+        if (active === 'btnAnalyzeTab') runAnalyzer(1);
+        if (active === 'btnDhatuTab') runDhatuSearch();
+    }
+});
