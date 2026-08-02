@@ -7,20 +7,27 @@ use super::numerals::analyze_numeral;
 use super::irregulars::analyze_irregular;
 use super::namadhatu::analyze_namadhatu;
 
-fn strip_accents(word: &str) -> String { 
-    word.replace(&['/', '\\', '^'][..], "").trim().to_string() 
-}
+fn strip_accents(word: &str) -> String { word.replace(&['/', '\\', '^'][..], "") }
 
-// FORGIVING MATCHER
 fn exact_match(row_val: &str, word: &str) -> bool {
     let clean_word = strip_accents(word);
-    row_val.split(',')
-        .map(|s| strip_accents(s))
-        .any(|s| s == clean_word || s.contains(&clean_word)) // Fallback to contains if invisible chars exist
+    row_val.split(',').map(|s| strip_accents(s.trim())).any(|s| s == clean_word)
+}
+
+// Only inserts wildcards after vowels to account for Vedic accents without causing 500,000 false positives!
+fn build_smart_wildcard(word: &str) -> String {
+    let mut res = String::from("%");
+    let clean = strip_accents(word);
+    for c in clean.chars() {
+        res.push(c);
+        if "aAiIuUfFxXeEoO".contains(c) { res.push('%'); }
+    }
+    if !res.ends_with('%') { res.push('%'); }
+    res
 }
 
 fn is_valid_participle(conn: &rusqlite::Connection, dhatu_id: &str, upasarga: &str, pratyaya: &str) -> bool {
-    if pratyaya == "lyap" && upasarga.trim().is_empty() { return false; }
+    if pratyaya == "lyap" && upasarga.is_empty() { return false; }
     let atmanepada_pratyayas = ["SAnac", "cAnaS", "sya-SAnac", "BAvakarma-SAnac", "sya-BAvakarma-SAnac"];
     if atmanepada_pratyayas.contains(&pratyaya) {
         let mut stmt = conn.prepare("SELECT 1 FROM conjugations WHERE dhatu_id = ?1 AND upasarga = ?2 AND voice = 'Atmanepadam' LIMIT 1").unwrap();
@@ -31,16 +38,15 @@ fn is_valid_participle(conn: &rusqlite::Connection, dhatu_id: &str, upasarga: &s
 }
 
 // ================== VERBS ==================
-async fn fetch_verbs(word: String, page: i64, pool: &Pool) -> Vec<Value> {
-    let word_clone = strip_accents(&word);
-    let offset = (page - 1) * 50;
+async fn fetch_verbs(word: String, pool: &Pool) -> Vec<Value> {
+    let word_clone = word.clone();
     pool.get().await.unwrap().interact(move |conn| {
         let mut res = Vec::new();
-        // Just use standard LIKE %word%
-        let search_term = format!("%{}%", word_clone);
+        let search_term = build_smart_wildcard(&word_clone);
         
-        let mut stmt = conn.prepare("SELECT dhatu_id, upasarga, derivative, prayoga, lakara, voice, purusha, eka, dvi, bahu FROM conjugations WHERE eka LIKE ?1 OR dvi LIKE ?1 OR bahu LIKE ?1 LIMIT 50 OFFSET ?2").unwrap();
-        let mut rows = stmt.query(rusqlite::params![search_term, offset]).unwrap();
+        // NO LIMITS: We read the stream directly, so we never miss a Dhatu ID!
+        let mut stmt = conn.prepare("SELECT dhatu_id, upasarga, derivative, prayoga, lakara, voice, purusha, eka, dvi, bahu FROM conjugations WHERE eka LIKE ?1 OR dvi LIKE ?1 OR bahu LIKE ?1").unwrap();
+        let mut rows = stmt.query([&search_term]).unwrap();
         while let Ok(Some(row)) = rows.next() {
             let eka: String = row.get("eka").unwrap_or_default();
             let dvi: String = row.get("dvi").unwrap_or_default();
@@ -58,11 +64,11 @@ async fn fetch_verbs(word: String, page: i64, pool: &Pool) -> Vec<Value> {
     }).await.unwrap()
 }
 
-async fn analyze_verb(word: &str, page: i64, pool: &Pool) -> Vec<Value> {
-    let mut results = fetch_verbs(word.to_string(), page, pool).await;
-    if results.is_empty() && page == 1 {
+async fn analyze_verb(word: &str, pool: &Pool) -> Vec<Value> {
+    let mut results = fetch_verbs(word.to_string(), pool).await;
+    if results.is_empty() {
         for (upa, stripped) in get_upasarga_splits(word) {
-            let mut sub_results = fetch_verbs(stripped, 1, pool).await;
+            let mut sub_results = fetch_verbs(stripped, pool).await;
             for res in sub_results.iter_mut() {
                 if res["upasarga"] == "" {
                     res["upasarga"] = json!(upa.clone());
@@ -77,15 +83,14 @@ async fn analyze_verb(word: &str, page: i64, pool: &Pool) -> Vec<Value> {
 }
 
 // ================== PARTICIPLES ==================
-async fn fetch_participles(word: String, page: i64, pool: &Pool) -> Vec<Value> {
-    let word_clone = strip_accents(&word);
-    let offset = (page - 1) * 50;
+async fn fetch_participles(word: String, pool: &Pool) -> Vec<Value> {
+    let word_clone = word.clone();
     pool.get().await.unwrap().interact(move |conn| {
         let mut res = Vec::new();
-        let search_term = format!("%{}%", word_clone);
+        let search_term = build_smart_wildcard(&word_clone);
         
-        let mut stmt = conn.prepare("SELECT dhatu_id, upasarga, derivative, pratyaya, base_form, masculine, feminine, neuter FROM participles WHERE base_form LIKE ?1 OR masculine LIKE ?1 OR feminine LIKE ?1 OR neuter LIKE ?1 LIMIT 50 OFFSET ?2").unwrap();
-        let mut rows = stmt.query(rusqlite::params![search_term, offset]).unwrap();
+        let mut stmt = conn.prepare("SELECT dhatu_id, upasarga, derivative, pratyaya, base_form, masculine, feminine, neuter FROM participles WHERE base_form LIKE ?1 OR masculine LIKE ?1 OR feminine LIKE ?1 OR neuter LIKE ?1").unwrap();
+        let mut rows = stmt.query([&search_term]).unwrap();
         
         let avyaya_pratyayas = ["tumun", "ktvA", "lyap", "Ramul"];
         
@@ -123,11 +128,11 @@ async fn fetch_participles(word: String, page: i64, pool: &Pool) -> Vec<Value> {
     }).await.unwrap()
 }
 
-async fn analyze_participle(word: &str, page: i64, pool: &Pool) -> Vec<Value> {
-    let mut results = fetch_participles(word.to_string(), page, pool).await;
-    if results.is_empty() && page == 1 {
+async fn analyze_participle(word: &str, pool: &Pool) -> Vec<Value> {
+    let mut results = fetch_participles(word.to_string(), pool).await;
+    if results.is_empty() {
         for (upa, stripped) in get_upasarga_splits(word) {
-            let mut sub_results = fetch_participles(stripped, 1, pool).await;
+            let mut sub_results = fetch_participles(stripped, pool).await;
             for res in sub_results.iter_mut() {
                 if res["upasarga"] == "" {
                     res["upasarga"] = json!(upa.clone());
@@ -142,19 +147,18 @@ async fn analyze_participle(word: &str, page: i64, pool: &Pool) -> Vec<Value> {
 }
 
 // ================== DECLENSIONS (NOUNS) ==================
-async fn analyze_declension(word: &str, page: i64, pool: &Pool) -> Vec<Value> {
+async fn analyze_declension(word: &str, pool: &Pool) -> Vec<Value> {
     let guessed_stems = get_stems(word);
     let guesses_json: Vec<Value> = guessed_stems.into_iter().map(|g| json!({"stem": g.stem, "gender": g.gender, "case": g.case, "vacana": g.vacana})).collect();
-    let offset = (page - 1) * 50;
     
     pool.get().await.unwrap().interact(move |conn| {
         let mut results = Vec::new();
         for guess in guesses_json {
             let stem = guess["stem"].as_str().unwrap();
-            let search_term = format!("%{}%", stem);
+            let search_term = build_smart_wildcard(stem);
             
-            let mut stmt = conn.prepare("SELECT dhatu_id, upasarga, pratyaya, base_form FROM participles WHERE base_form LIKE ?1 LIMIT 50 OFFSET ?2").unwrap();
-            let mut rows = stmt.query(rusqlite::params![search_term, offset]).unwrap();
+            let mut stmt = conn.prepare("SELECT dhatu_id, upasarga, pratyaya, base_form FROM participles WHERE base_form LIKE ?1").unwrap();
+            let mut rows = stmt.query([&search_term]).unwrap();
             
             let mut exact_matches = Vec::new();
             while let Ok(Some(row)) = rows.next() {
@@ -171,11 +175,11 @@ async fn analyze_declension(word: &str, page: i64, pool: &Pool) -> Vec<Value> {
                     r["dhatu_id"] = m["dhatu_id"].clone(); r["upasarga"] = m["upasarga"].clone(); r["pratyaya"] = m["pratyaya"].clone();
                     results.push(r);
                 }
-            } else if page == 1 {
+            } else {
                 let mut found_dynamic = false;
                 for (upa, stripped_stem) in get_upasarga_splits(stem) {
-                    let s_term = format!("%{}%", stripped_stem);
-                    let mut d_stmt = conn.prepare("SELECT dhatu_id, pratyaya, base_form FROM participles WHERE base_form LIKE ?1 AND upasarga = '' LIMIT 50").unwrap();
+                    let s_term = build_smart_wildcard(&stripped_stem);
+                    let mut d_stmt = conn.prepare("SELECT dhatu_id, pratyaya, base_form FROM participles WHERE base_form LIKE ?1 AND upasarga = ''").unwrap();
                     let mut d_rows = d_stmt.query([&s_term]).unwrap();
                     
                     while let Ok(Some(row)) = d_rows.next() {
@@ -204,23 +208,17 @@ async fn analyze_declension(word: &str, page: i64, pool: &Pool) -> Vec<Value> {
     }).await.unwrap()
 }
 
-pub async fn analyze(word: &str, page: i64, pool: &Pool) -> Value {
-    let verbs = analyze_verb(word, page, pool).await;
-    let participles = analyze_participle(word, page, pool).await;
-    let declensions = analyze_declension(word, page, pool).await;
+pub async fn analyze(word: &str, pool: &Pool) -> Value {
+    let verbs = analyze_verb(word, pool).await;
+    let participles = analyze_participle(word, pool).await;
+    let declensions = analyze_declension(word, pool).await;
+    let pronouns = analyze_pronoun(word, pool).await;
+    let numerals = analyze_numeral(word, pool).await;
+    let irregulars = analyze_irregular(word, pool).await;
+    let namadhatus = analyze_namadhatu(word);
     
-    let (pronouns, numerals, irregulars, namadhatus) = if page == 1 {
-        (analyze_pronoun(word, pool).await, analyze_numeral(word, pool).await, analyze_irregular(word, pool).await, analyze_namadhatu(word))
-    } else {
-        (vec![], vec![], vec![], vec![])
-    };
-
-    let has_more = verbs.len() >= 50 || participles.len() >= 50 || declensions.len() >= 50;
-
     json!({
         "searched_word": word,
-        "page": page,
-        "has_more": has_more,
         "verbs": verbs,
         "participles": participles,
         "declensions": declensions,
