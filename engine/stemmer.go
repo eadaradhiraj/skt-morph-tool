@@ -101,7 +101,68 @@ func init() {
 		rule(`tre$`, "tf", "masc/fem", "caturthi", "eka"),
 		rule(`tuH$`, "tf", "masc/fem", "panchami/sasthi", "eka"),
 
-		// HALANTA & CONSONANTS
+		// HALANTA: 'c', 'j', 'd', 't', 'z' STEMS
+		rule(`kzu$`, "c", "masc/fem", "saptami", "bahu"),
+		rule(`cO$`, "c", "masc/fem", "prathama/dvitiya", "dvi"),
+		rule(`caH$`, "c", "masc/fem", "prathama/dvitiya/panchami/sasthi", "bahu/eka"),
+		rule(`cam$`, "c", "masc/fem", "dvitiya", "eka"),
+		rule(`cA$`, "c", "masc/fem", "tritiya", "eka"),
+		rule(`ce$`, "c", "masc/fem", "caturthi", "eka"),
+		rule(`ci$`, "c", "masc/fem", "saptami", "eka"),
+		rule(`gByAm$`, "c", "masc/fem", "tritiya/caturthi/panchami", "dvi"),
+
+		rule(`jO$`, "j", "masc/fem", "prathama/dvitiya", "dvi"),
+		rule(`jaH$`, "j", "masc/fem", "prathama/dvitiya/panchami/sasthi", "bahu/eka"),
+		rule(`jam$`, "j", "masc/fem", "dvitiya", "eka"),
+		rule(`jA$`, "j", "masc/fem", "tritiya", "eka"),
+		rule(`je$`, "j", "masc/fem", "caturthi", "eka"),
+		rule(`ji$`, "j", "masc/fem", "saptami", "eka"),
+
+		rule(`tsu$`, "d", "masc/fem", "saptami", "bahu"),
+		rule(`dO$`, "d", "masc/fem", "prathama/dvitiya", "dvi"),
+		rule(`daH$`, "d", "masc/fem", "prathama/dvitiya/panchami/sasthi", "bahu/eka"),
+		rule(`dam$`, "d", "masc/fem", "dvitiya", "eka"),
+		rule(`dA$`, "d", "masc/fem", "tritiya", "eka"),
+		rule(`de$`, "d", "masc/fem", "caturthi", "eka"),
+		rule(`di$`, "d", "masc/fem", "saptami", "eka"),
+		rule(`dByAm$`, "d", "masc/fem", "tritiya/caturthi/panchami", "dvi"),
+
+		rule(`w$`, "z", "masc/fem", "prathama", "eka"),
+		rule(`wsu$`, "z", "masc/fem", "saptami", "bahu"),
+		rule(`qByAm$`, "z", "masc/fem", "tritiya/caturthi/panchami", "dvi"),
+		rule(`zO$`, "z", "masc/fem", "prathama/dvitiya", "dvi"),
+		rule(`zaH$`, "z", "masc/fem", "prathama/dvitiya/panchami/sasthi", "bahu/eka"),
+		rule(`zam$`, "z", "masc/fem", "dvitiya", "eka"),
+
+		// HALANTA: 'is' & 'us' NEUTER STEMS
+		rule(`izI$`, "is", "neut", "prathama/dvitiya", "dvi"),
+		rule(`IMzi$`, "is", "neut", "prathama/dvitiya", "bahu"),
+		rule(`izA$`, "is", "neut", "tritiya", "eka"),
+		rule(`irByAm$`, "is", "neut", "tritiya/caturthi/panchami", "dvi"),
+
+		rule(`uzI$`, "us", "neut", "prathama/dvitiya", "dvi"),
+		rule(`UMzi$`, "us", "neut", "prathama/dvitiya", "bahu"),
+		rule(`uzA$`, "us", "neut", "tritiya", "eka"),
+		rule(`urByAm$`, "us", "neut", "tritiya/caturthi/panchami", "dvi"),
+
+		// HALANTA: 'vat' & 'mat' STEMS
+		rule(`vAn$`, "vat", "masc", "prathama", "eka"),
+		rule(`vantO$`, "vat", "masc", "prathama/dvitiya", "dvi"),
+		rule(`vantaH$`, "vat", "masc", "prathama", "bahu"),
+		rule(`vantam$`, "vat", "masc", "dvitiya", "eka"),
+		rule(`vataH$`, "vat", "masc/neut", "dvitiya/panchami/sasthi", "bahu/eka"),
+		rule(`vatA$`, "vat", "masc/neut", "tritiya", "eka"),
+		rule(`vadByAm$`, "vat", "masc/neut", "tritiya/caturthi/panchami", "dvi"),
+
+		rule(`mAn$`, "mat", "masc", "prathama", "eka"),
+		rule(`mantO$`, "mat", "masc", "prathama/dvitiya", "dvi"),
+		rule(`mantaH$`, "mat", "masc", "prathama", "bahu"),
+		rule(`mantam$`, "mat", "masc", "dvitiya", "eka"),
+		rule(`mataH$`, "mat", "masc/neut", "dvitiya/panchami/sasthi", "bahu/eka"),
+		rule(`matA$`, "mat", "masc/neut", "tritiya", "eka"),
+		rule(`madByAm$`, "mat", "masc/neut", "tritiya/caturthi/panchami", "dvi"),
+
+		// HALANTA: 'an', 'in', 'at', 'as'
 		rule(`an$`, "at", "masc", "prathama/sambodhana", "eka"),
 		rule(`antO$`, "at", "masc", "prathama/dvitiya", "dvi"),
 		rule(`antaH$`, "at", "masc", "prathama", "bahu"),
@@ -113,12 +174,6 @@ func init() {
 		rule(`aH$`, "as", "neut", "prathama/dvitiya", "eka"),
 		rule(`asI$`, "as", "neut", "prathama/dvitiya", "dvi"),
 		rule(`AMsi$`, "as", "neut", "prathama/dvitiya", "bahu"),
-		rule(`vAn$`, "vat", "masc", "prathama", "eka"),
-		rule(`vantO$`, "vat", "masc", "prathama/dvitiya", "dvi"),
-		rule(`vantaH$`, "vat", "masc", "prathama", "bahu"),
-		rule(`mAn$`, "mat", "masc", "prathama", "eka"),
-		rule(`mantO$`, "mat", "masc", "prathama/dvitiya", "dvi"),
-		rule(`mantaH$`, "mat", "masc", "prathama", "bahu"),
 	}
 }
 

@@ -6,9 +6,6 @@ import (
 )
 
 // applyNatva applies Sanskrit Natva (n -> R) rule according to Paninian grammar (8.4.1 - 8.4.2)
-// Triggers: r, f, F, z
-// Intervenors allowed: Vowels, Gutturals (k, K, g, G, N), Labials (p, P, b, B, m), Glides/Aspirates (y, v, h, M)
-// Target: n followed by vowel/glide/nasal
 func applyNatva(word string) string {
 	runes := []rune(word)
 	n := len(runes)
@@ -151,7 +148,212 @@ func DeclineNoun(base string, gender string) (map[string][]string, error) {
 
 	res := make(map[string][]string)
 
-	if strings.HasSuffix(base, "a") {
+	if strings.HasSuffix(base, "vat") && len(base) >= 3 {
+		s3 := base[:len(base)-3]
+		if gender == "masculine" {
+			res = buildGrid(
+				[3]string{s3 + "vAn", s3 + "vantO", s3 + "vantaH"},
+				[3]string{s3 + "vantam", s3 + "vantO", s3 + "vataH"},
+				[3]string{s3 + "vatA", s3 + "vadByAm", s3 + "vadBiH"},
+				[3]string{s3 + "vate", s3 + "vadByAm", s3 + "vadByaH"},
+				[3]string{s3 + "vataH", s3 + "vadByAm", s3 + "vadByaH"},
+				[3]string{s3 + "vataH", s3 + "vatoH", s3 + "vatAm"},
+				[3]string{s3 + "vati", s3 + "vatoH", s3 + "vatsu"},
+				[3]string{s3 + "van", s3 + "vantO", s3 + "vantaH"},
+			)
+		} else if gender == "neuter" {
+			res = buildGrid(
+				[3]string{s3 + "vat", s3 + "vatI", s3 + "vanti"},
+				[3]string{s3 + "vat", s3 + "vatI", s3 + "vanti"},
+				[3]string{s3 + "vatA", s3 + "vadByAm", s3 + "vadBiH"},
+				[3]string{s3 + "vate", s3 + "vadByAm", s3 + "vadByaH"},
+				[3]string{s3 + "vataH", s3 + "vadByAm", s3 + "vadByaH"},
+				[3]string{s3 + "vataH", s3 + "vatoH", s3 + "vatAm"},
+				[3]string{s3 + "vati", s3 + "vatoH", s3 + "vatsu"},
+				[3]string{s3 + "vat", s3 + "vatI", s3 + "vanti"},
+			)
+		}
+	} else if strings.HasSuffix(base, "mat") && len(base) >= 3 {
+		s3 := base[:len(base)-3]
+		if gender == "masculine" {
+			res = buildGrid(
+				[3]string{s3 + "mAn", s3 + "mantO", s3 + "mantaH"},
+				[3]string{s3 + "mantam", s3 + "mantO", s3 + "mataH"},
+				[3]string{s3 + "matA", s3 + "madByAm", s3 + "madBiH"},
+				[3]string{s3 + "mate", s3 + "madByAm", s3 + "madByaH"},
+				[3]string{s3 + "mataH", s3 + "madByAm", s3 + "madByaH"},
+				[3]string{s3 + "mataH", s3 + "matoH", s3 + "matAm"},
+				[3]string{s3 + "mati", s3 + "matoH", s3 + "matsu"},
+				[3]string{s3 + "man", s3 + "mantO", s3 + "mantaH"},
+			)
+		} else if gender == "neuter" {
+			res = buildGrid(
+				[3]string{s3 + "mat", s3 + "matI", s3 + "manti"},
+				[3]string{s3 + "mat", s3 + "matI", s3 + "manti"},
+				[3]string{s3 + "matA", s3 + "madByAm", s3 + "madBiH"},
+				[3]string{s3 + "mate", s3 + "madByAm", s3 + "madByaH"},
+				[3]string{s3 + "mataH", s3 + "madByAm", s3 + "madByaH"},
+				[3]string{s3 + "mataH", s3 + "matoH", s3 + "matAm"},
+				[3]string{s3 + "mati", s3 + "matoH", s3 + "matsu"},
+				[3]string{s3 + "mat", s3 + "matI", s3 + "manti"},
+			)
+		}
+	} else if strings.HasSuffix(base, "at") && len(base) >= 2 {
+		s2 := base[:len(base)-2]
+		if gender == "masculine" {
+			res = buildGrid(
+				[3]string{s2 + "an", s2 + "antO", s2 + "antaH"},
+				[3]string{s2 + "antam", s2 + "antO", s2 + "ataH"},
+				[3]string{s2 + "atA", s2 + "adByAm", s2 + "adBiH"},
+				[3]string{s2 + "ate", s2 + "adByAm", s2 + "adByaH"},
+				[3]string{s2 + "ataH", s2 + "adByAm", s2 + "adByaH"},
+				[3]string{s2 + "ataH", s2 + "atoH", s2 + "atAm"},
+				[3]string{s2 + "ati", s2 + "atoH", s2 + "atsu"},
+				[3]string{s2 + "an", s2 + "antO", s2 + "antaH"},
+			)
+		} else if gender == "neuter" {
+			res = buildGrid(
+				[3]string{s2 + "at", s2 + "atI", s2 + "anti"},
+				[3]string{s2 + "at", s2 + "atI", s2 + "anti"},
+				[3]string{s2 + "atA", s2 + "adByAm", s2 + "adBiH"},
+				[3]string{s2 + "ate", s2 + "adByAm", s2 + "adByaH"},
+				[3]string{s2 + "ataH", s2 + "adByAm", s2 + "adByaH"},
+				[3]string{s2 + "ataH", s2 + "atoH", s2 + "atAm"},
+				[3]string{s2 + "ati", s2 + "atoH", s2 + "atsu"},
+				[3]string{s2 + "at", s2 + "atI", s2 + "anti"},
+			)
+		}
+	} else if strings.HasSuffix(base, "an") && len(base) >= 2 {
+		s2 := base[:len(base)-2]
+		if gender == "masculine" {
+			res = buildGrid(
+				[3]string{s2 + "A", s2 + "AnO", s2 + "AnaH"},
+				[3]string{s2 + "Anam", s2 + "AnO", s2 + "naH"},
+				[3]string{s2 + "nA", s2 + "aByAm", s2 + "aBiH"},
+				[3]string{s2 + "ne", s2 + "aByAm", s2 + "aByaH"},
+				[3]string{s2 + "naH", s2 + "aByAm", s2 + "aByaH"},
+				[3]string{s2 + "naH", s2 + "noH", s2 + "nAm"},
+				[3]string{s2 + "ni", s2 + "noH", s2 + "asu"},
+				[3]string{s2 + "an", s2 + "AnO", s2 + "AnaH"},
+			)
+		}
+	} else if strings.HasSuffix(base, "in") && len(base) >= 2 {
+		s2 := base[:len(base)-2]
+		if gender == "masculine" {
+			res = buildGrid(
+				[3]string{s2 + "I", s2 + "inO", s2 + "inaH"},
+				[3]string{s2 + "inam", s2 + "inO", s2 + "inaH"},
+				[3]string{s2 + "inA", s2 + "iByAm", s2 + "iBiH"},
+				[3]string{s2 + "ine", s2 + "iByAm", s2 + "iByaH"},
+				[3]string{s2 + "inaH", s2 + "iByAm", s2 + "iByaH"},
+				[3]string{s2 + "inaH", s2 + "inoH", s2 + "inAm"},
+				[3]string{s2 + "ini", s2 + "inoH", s2 + "izu"},
+				[3]string{s2 + "in", s2 + "inO", s2 + "inaH"},
+			)
+		}
+	} else if strings.HasSuffix(base, "as") && len(base) >= 2 {
+		s2 := base[:len(base)-2]
+		if gender == "neuter" {
+			res = buildGrid(
+				[3]string{s2 + "aH", s2 + "asI", s2 + "AMsi"},
+				[3]string{s2 + "aH", s2 + "asI", s2 + "AMsi"},
+				[3]string{s2 + "asA", s2 + "oByAm", s2 + "oBiH"},
+				[3]string{s2 + "ase", s2 + "oByAm", s2 + "oByaH"},
+				[3]string{s2 + "asaH", s2 + "oByAm", s2 + "oByaH"},
+				[3]string{s2 + "asaH", s2 + "asoH", s2 + "asAm"},
+				[3]string{s2 + "asi", s2 + "asoH", s2 + "asu"},
+				[3]string{s2 + "aH", s2 + "asI", s2 + "AMsi"},
+			)
+		}
+	} else if strings.HasSuffix(base, "is") && len(base) >= 2 {
+		s2 := base[:len(base)-2]
+		if gender == "neuter" {
+			res = buildGrid(
+				[3]string{s2 + "iH", s2 + "izI", s2 + "IMzi"},
+				[3]string{s2 + "iH", s2 + "izI", s2 + "IMzi"},
+				[3]string{s2 + "izA", s2 + "irByAm", s2 + "irBiH"},
+				[3]string{s2 + "ize", s2 + "irByAm", s2 + "irByaH"},
+				[3]string{s2 + "izaH", s2 + "irByAm", s2 + "irByaH"},
+				[3]string{s2 + "izaH", s2 + "izoH", s2 + "izAm"},
+				[3]string{s2 + "izi", s2 + "izoH", s2 + "iHzu"},
+				[3]string{s2 + "iH", s2 + "izI", s2 + "IMzi"},
+			)
+		}
+	} else if strings.HasSuffix(base, "us") && len(base) >= 2 {
+		s2 := base[:len(base)-2]
+		if gender == "neuter" {
+			res = buildGrid(
+				[3]string{s2 + "uH", s2 + "uzI", s2 + "UMzi"},
+				[3]string{s2 + "uH", s2 + "uzI", s2 + "UMzi"},
+				[3]string{s2 + "uzA", s2 + "urByAm", s2 + "urBiH"},
+				[3]string{s2 + "uze", s2 + "urByAm", s2 + "urByaH"},
+				[3]string{s2 + "uzaH", s2 + "urByAm", s2 + "urByaH"},
+				[3]string{s2 + "uzaH", s2 + "uzoH", s2 + "uzAm"},
+				[3]string{s2 + "uzi", s2 + "uzoH", s2 + "uHzu"},
+				[3]string{s2 + "uH", s2 + "uzI", s2 + "UMzi"},
+			)
+		}
+	} else if strings.HasSuffix(base, "c") && len(base) >= 1 {
+		s1 := base[:len(base)-1]
+		res = buildGrid(
+			[3]string{s1 + "k", s1 + "cO", s1 + "caH"},
+			[3]string{s1 + "cam", s1 + "cO", s1 + "caH"},
+			[3]string{s1 + "cA", s1 + "gByAm", s1 + "gBiH"},
+			[3]string{s1 + "ce", s1 + "gByAm", s1 + "gByaH"},
+			[3]string{s1 + "caH", s1 + "gByAm", s1 + "gByaH"},
+			[3]string{s1 + "caH", s1 + "coH", s1 + "cAm"},
+			[3]string{s1 + "ci", s1 + "coH", s1 + "kzu"},
+			[3]string{s1 + "k", s1 + "cO", s1 + "caH"},
+		)
+	} else if strings.HasSuffix(base, "j") && len(base) >= 1 {
+		s1 := base[:len(base)-1]
+		res = buildGrid(
+			[3]string{s1 + "k", s1 + "jO", s1 + "jaH"},
+			[3]string{s1 + "jam", s1 + "jO", s1 + "jaH"},
+			[3]string{s1 + "jA", s1 + "gByAm", s1 + "gBiH"},
+			[3]string{s1 + "je", s1 + "gByAm", s1 + "gByaH"},
+			[3]string{s1 + "jaH", s1 + "gByAm", s1 + "gByaH"},
+			[3]string{s1 + "jaH", s1 + "joH", s1 + "jAm"},
+			[3]string{s1 + "ji", s1 + "joH", s1 + "kzu"},
+			[3]string{s1 + "k", s1 + "jO", s1 + "jaH"},
+		)
+	} else if strings.HasSuffix(base, "d") && len(base) >= 1 {
+		s1 := base[:len(base)-1]
+		res = buildGrid(
+			[3]string{s1 + "t", s1 + "dO", s1 + "daH"},
+			[3]string{s1 + "dam", s1 + "dO", s1 + "daH"},
+			[3]string{s1 + "dA", s1 + "dByAm", s1 + "dBiH"},
+			[3]string{s1 + "de", s1 + "dByAm", s1 + "dByaH"},
+			[3]string{s1 + "daH", s1 + "dByAm", s1 + "dByaH"},
+			[3]string{s1 + "daH", s1 + "doH", s1 + "dAm"},
+			[3]string{s1 + "di", s1 + "doH", s1 + "tsu"},
+			[3]string{s1 + "t", s1 + "dO", s1 + "daH"},
+		)
+	} else if strings.HasSuffix(base, "z") && len(base) >= 1 {
+		s1 := base[:len(base)-1]
+		res = buildGrid(
+			[3]string{s1 + "w", s1 + "zO", s1 + "zaH"},
+			[3]string{s1 + "zam", s1 + "zO", s1 + "zaH"},
+			[3]string{s1 + "zA", s1 + "qByAm", s1 + "qBiH"},
+			[3]string{s1 + "ze", s1 + "qByAm", s1 + "qByaH"},
+			[3]string{s1 + "zaH", s1 + "qByAm", s1 + "qByaH"},
+			[3]string{s1 + "zaH", s1 + "zoH", s1 + "zAm"},
+			[3]string{s1 + "zi", s1 + "zoH", s1 + "wsu"},
+			[3]string{s1 + "w", s1 + "zO", s1 + "zaH"},
+		)
+	} else if strings.HasSuffix(base, "t") && len(base) >= 1 {
+		s1 := base[:len(base)-1]
+		res = buildGrid(
+			[3]string{s1 + "t", s1 + "tO", s1 + "taH"},
+			[3]string{s1 + "tam", s1 + "tO", s1 + "taH"},
+			[3]string{s1 + "tA", s1 + "dByAm", s1 + "dBiH"},
+			[3]string{s1 + "te", s1 + "dByAm", s1 + "dByaH"},
+			[3]string{s1 + "taH", s1 + "dByAm", s1 + "dByaH"},
+			[3]string{s1 + "taH", s1 + "toH", s1 + "tAm"},
+			[3]string{s1 + "ti", s1 + "toH", s1 + "tsu"},
+			[3]string{s1 + "t", s1 + "tO", s1 + "taH"},
+		)
+	} else if strings.HasSuffix(base, "a") {
 		s := base[:len(base)-1]
 		if gender == "masculine" {
 			res = buildGrid(
@@ -302,73 +504,6 @@ func DeclineNoun(base string, gender string) (map[string][]string, error) {
 				[3]string{s + "tuH", s + "troH", s + "tFnAm"},
 				[3]string{s + "tari", s + "troH", s + "tfzu"},
 				[3]string{s + "taH", s + "tArO", s + "tAraH"},
-			)
-		}
-	} else if strings.HasSuffix(base, "at") && len(base) >= 2 {
-		s2 := base[:len(base)-2]
-		if gender == "masculine" {
-			res = buildGrid(
-				[3]string{s2 + "an", s2 + "antO", s2 + "antaH"},
-				[3]string{s2 + "antam", s2 + "antO", s2 + "ataH"},
-				[3]string{s2 + "atA", s2 + "adByAm", s2 + "adBiH"},
-				[3]string{s2 + "ate", s2 + "adByAm", s2 + "adByaH"},
-				[3]string{s2 + "ataH", s2 + "adByAm", s2 + "adByaH"},
-				[3]string{s2 + "ataH", s2 + "atoH", s2 + "atAm"},
-				[3]string{s2 + "ati", s2 + "atoH", s2 + "atsu"},
-				[3]string{s2 + "an", s2 + "antO", s2 + "antaH"},
-			)
-		} else if gender == "neuter" {
-			res = buildGrid(
-				[3]string{s2 + "at", s2 + "atI", s2 + "anti"},
-				[3]string{s2 + "at", s2 + "atI", s2 + "anti"},
-				[3]string{s2 + "atA", s2 + "adByAm", s2 + "adBiH"},
-				[3]string{s2 + "ate", s2 + "adByAm", s2 + "adByaH"},
-				[3]string{s2 + "ataH", s2 + "adByAm", s2 + "adByaH"},
-				[3]string{s2 + "ataH", s2 + "atoH", s2 + "atAm"},
-				[3]string{s2 + "ati", s2 + "atoH", s2 + "atsu"},
-				[3]string{s2 + "at", s2 + "atI", s2 + "anti"},
-			)
-		}
-	} else if strings.HasSuffix(base, "an") && len(base) >= 2 {
-		s2 := base[:len(base)-2]
-		if gender == "masculine" {
-			res = buildGrid(
-				[3]string{s2 + "A", s2 + "AnO", s2 + "AnaH"},
-				[3]string{s2 + "Anam", s2 + "AnO", s2 + "naH"},
-				[3]string{s2 + "nA", s2 + "aByAm", s2 + "aBiH"},
-				[3]string{s2 + "ne", s2 + "aByAm", s2 + "aByaH"},
-				[3]string{s2 + "naH", s2 + "aByAm", s2 + "aByaH"},
-				[3]string{s2 + "naH", s2 + "noH", s2 + "nAm"},
-				[3]string{s2 + "ni", s2 + "noH", s2 + "asu"},
-				[3]string{s2 + "an", s2 + "AnO", s2 + "AnaH"},
-			)
-		}
-	} else if strings.HasSuffix(base, "in") && len(base) >= 2 {
-		s2 := base[:len(base)-2]
-		if gender == "masculine" {
-			res = buildGrid(
-				[3]string{s2 + "I", s2 + "inO", s2 + "inaH"},
-				[3]string{s2 + "inam", s2 + "inO", s2 + "inaH"},
-				[3]string{s2 + "inA", s2 + "iByAm", s2 + "iBiH"},
-				[3]string{s2 + "ine", s2 + "iByAm", s2 + "iByaH"},
-				[3]string{s2 + "inaH", s2 + "iByAm", s2 + "iByaH"},
-				[3]string{s2 + "inaH", s2 + "inoH", s2 + "inAm"},
-				[3]string{s2 + "ini", s2 + "inoH", s2 + "izu"},
-				[3]string{s2 + "in", s2 + "inO", s2 + "inaH"},
-			)
-		}
-	} else if strings.HasSuffix(base, "as") && len(base) >= 2 {
-		s2 := base[:len(base)-2]
-		if gender == "neuter" {
-			res = buildGrid(
-				[3]string{s2 + "aH", s2 + "asI", s2 + "AMsi"},
-				[3]string{s2 + "aH", s2 + "asI", s2 + "AMsi"},
-				[3]string{s2 + "asA", s2 + "oByAm", s2 + "oBiH"},
-				[3]string{s2 + "ase", s2 + "oByAm", s2 + "oByaH"},
-				[3]string{s2 + "asaH", s2 + "oByAm", s2 + "oByaH"},
-				[3]string{s2 + "asaH", s2 + "asoH", s2 + "asAm"},
-				[3]string{s2 + "asi", s2 + "asoH", s2 + "asu"},
-				[3]string{s2 + "aH", s2 + "asI", s2 + "AMsi"},
 			)
 		}
 	}
