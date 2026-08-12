@@ -13,7 +13,6 @@ func isASCIIDigit(s string) bool {
 	return unicode.IsDigit(rune(s[0]))
 }
 
-// GenerateVerb generates 3D verb forms (eka, dvi, bahu) from given morphological parameters
 func GenerateVerb(db *sql.DB, root, upasarga, lakara, purusha, voice, prayoga, derivative string) map[string]any {
 	isID := isASCIIDigit(root)
 
@@ -34,7 +33,6 @@ func GenerateVerb(db *sql.DB, root, upasarga, lakara, purusha, voice, prayoga, d
 		}
 	}
 
-	// Dynamic sandhi fallback if prefix is present
 	if upasarga != "" {
 		var qDyn string
 		if isID {
@@ -62,7 +60,6 @@ func GenerateVerb(db *sql.DB, root, upasarga, lakara, purusha, voice, prayoga, d
 	}
 }
 
-// GenerateParticiple generates participle base forms and declension tables
 func GenerateParticiple(db *sql.DB, root, upasarga, pratyaya, gender, derivative string) map[string]any {
 	isID := isASCIIDigit(root)
 
@@ -131,7 +128,6 @@ func GenerateParticiple(db *sql.DB, root, upasarga, pratyaya, gender, derivative
 	}
 }
 
-// GenerateDeclension generates full noun declension tables
 func GenerateDeclension(base, gender string) map[string]any {
 	declensions, err := DeclineNoun(base, gender)
 	if err != nil {

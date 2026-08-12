@@ -6,14 +6,14 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
-	_ "modernc.org/sqlite" // Pure-Go SQLite driver
+	_ "modernc.org/sqlite"
 
 	"github.com/edhiraj/skt-morph-tool/engine"
 )
 
-// Query parameter structs (matches Rust's serde #[derive(Deserialize)])
 type VerbQuery struct {
 	Root       string `form:"root"`
 	Upasarga   string `form:"upasarga"`
@@ -37,27 +37,47 @@ type DeclensionQuery struct {
 	Gender string `form:"gender"`
 }
 
+func corsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	}
+}
+
 func main() {
-	// 1. Initialize SQLite Database Pool
-	// Go's *sql.DB is natively a thread-safe connection pool!
-	db, err := sql.Open("sqlite", "data/skt_morphology.db")
+	db, err := sql.Open("sqlite", "data/skt_morphology.db?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)")
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}
 	defer db.Close()
 
-	// 2. Initialize Gin Router
-	r := gin.Default()
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(5)
 
-	// 3. API Routes
+	r := gin.Default()
+	r.Use(corsMiddleware())
+
 	r.GET("/api/analyze/:word", func(c *gin.Context) {
-		word := c.Param("word")
+		word := strings.TrimSpace(c.Param("word"))
+		if word == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Word parameter cannot be empty"})
+			return
+		}
 		result := engine.Analyze(db, word)
 		c.JSON(http.StatusOK, result)
 	})
 
 	r.GET("/api/dhatus/:query", func(c *gin.Context) {
-		query := c.Param("query")
+		query := strings.TrimSpace(c.Param("query"))
 		result := engine.SearchDhatu(db, query)
 		c.JSON(http.StatusOK, result)
 	})
@@ -92,16 +112,13 @@ func main() {
 		c.JSON(http.StatusOK, result)
 	})
 
-	// 4. Serve Static Frontend Files (Axum ServeDir equivalent)
 	r.Static("/assets", "frontend/dist/assets")
 	r.StaticFile("/", "frontend/dist/index.html")
-	
-	// Fallback for single-page applications (SPA routing)
+
 	r.NoRoute(func(c *gin.Context) {
 		c.File("frontend/dist/index.html")
 	})
 
-	// 5. Environment PORT handling
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8000"
@@ -109,7 +126,6 @@ func main() {
 	addr := fmt.Sprintf("0.0.0.0:%s", port)
 	fmt.Printf("✅ Server running on http://%s\n", addr)
 
-	// 6. Start Server
 	if err := r.Run(addr); err != nil {
 		log.Fatalf("Server start failed: %v", err)
 	}

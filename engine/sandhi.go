@@ -50,19 +50,21 @@ func GetUpasargaSplits(word string) [][2]string {
 
 // ApplyUpasargaSandhi applies sandhi rules when combining prefixes with verb forms
 func ApplyUpasargaSandhi(upasargaStr string, form string) string {
-	if upasargaStr == "" {
+	if upasargaStr == "" || form == "" {
 		return form
 	}
 
 	rawPrefixes := strings.Split(upasargaStr, "+")
 	prefixes := make([]string, 0, len(rawPrefixes))
 	for _, s := range rawPrefixes {
-		prefixes = append(prefixes, strings.TrimSpace(s))
+		p := strings.TrimSpace(s)
+		if p != "" {
+			prefixes = append(prefixes, p)
+		}
 	}
 
 	result := form
 
-	// Iterate prefixes in reverse (matching Rust's rev())
 	for i := len(prefixes) - 1; i >= 0; i-- {
 		p := prefixes[i]
 		if p == "AN" {
@@ -75,27 +77,37 @@ func ApplyUpasargaSandhi(upasargaStr string, form string) string {
 		}
 
 		pLast := pRunes[len(pRunes)-1]
+		pMinusOne := string(pRunes[:len(pRunes)-1])
 
 		rRunes := []rune(result)
-		var rFirst rune
-		if len(rRunes) > 0 {
-			rFirst = rRunes[0]
+		if len(rRunes) == 0 {
+			result = p + result
+			continue
 		}
+
+		rFirst := rRunes[0]
+		rMinusFirst := string(rRunes[1:])
 
 		isVowel := func(c rune) bool {
-			return strings.ContainsRune("aAiIuUfFeEoO", c)
+			return strings.ContainsRune("aAiIuUfFxXeEoO", c)
 		}
 
-		pMinusOne := string(pRunes[:len(pRunes)-1])
-		rMinusFirst := ""
-		if len(rRunes) > 1 {
-			rMinusFirst = string(rRunes[1:])
-		}
-
-		if pLast == 'i' && isVowel(rFirst) {
-			result = pMinusOne + "y" + result
-		} else if pLast == 'u' && isVowel(rFirst) {
-			result = pMinusOne + "v" + result
+		if pLast == 'i' || pLast == 'I' {
+			if rFirst == 'i' || rFirst == 'I' {
+				result = pMinusOne + "I" + rMinusFirst
+			} else if isVowel(rFirst) {
+				result = pMinusOne + "y" + result
+			} else {
+				result = p + result
+			}
+		} else if pLast == 'u' || pLast == 'U' {
+			if rFirst == 'u' || rFirst == 'U' {
+				result = pMinusOne + "U" + rMinusFirst
+			} else if isVowel(rFirst) {
+				result = pMinusOne + "v" + result
+			} else {
+				result = p + result
+			}
 		} else if pLast == 'a' || pLast == 'A' {
 			if rFirst == 'a' || rFirst == 'A' {
 				result = pMinusOne + "A" + rMinusFirst
@@ -105,6 +117,10 @@ func ApplyUpasargaSandhi(upasargaStr string, form string) string {
 				result = pMinusOne + "o" + rMinusFirst
 			} else if rFirst == 'f' || rFirst == 'F' {
 				result = pMinusOne + "ar" + rMinusFirst
+			} else if rFirst == 'e' || rFirst == 'E' {
+				result = pMinusOne + "E" + rMinusFirst
+			} else if rFirst == 'o' || rFirst == 'O' {
+				result = pMinusOne + "O" + rMinusFirst
 			} else {
 				result = p + result
 			}
@@ -115,12 +131,30 @@ func ApplyUpasargaSandhi(upasargaStr string, form string) string {
 				result = p + result
 			}
 		} else if pLast == 'd' {
-			if strings.ContainsRune("kKqQpPzSs", rFirst) {
+			if strings.ContainsRune("kKqQpPzSstT", rFirst) {
 				result = pMinusOne + "t" + result
 			} else if strings.ContainsRune("cC", rFirst) {
 				result = pMinusOne + "c" + result
 			} else if strings.ContainsRune("jJ", rFirst) {
 				result = pMinusOne + "j" + result
+			} else if rFirst == 'l' {
+				result = pMinusOne + "l" + result
+			} else if rFirst == 'n' || rFirst == 'm' {
+				result = pMinusOne + "n" + result
+			} else {
+				result = p + result
+			}
+		} else if pLast == 'r' {
+			if rFirst == 'r' {
+				if len(pRunes) >= 2 && pRunes[len(pRunes)-2] == 'i' {
+					pMinusTwo := string(pRunes[:len(pRunes)-2])
+					result = pMinusTwo + "I" + result
+				} else if len(pRunes) >= 2 && pRunes[len(pRunes)-2] == 'u' {
+					pMinusTwo := string(pRunes[:len(pRunes)-2])
+					result = pMinusTwo + "U" + result
+				} else {
+					result = p + result
+				}
 			} else {
 				result = p + result
 			}
@@ -128,7 +162,6 @@ func ApplyUpasargaSandhi(upasargaStr string, form string) string {
 			result = p + result
 		}
 
-		// applyNatva is available in package scope from declension.go
 		result = applyNatva(result)
 	}
 

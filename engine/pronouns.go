@@ -6,34 +6,81 @@ type pronounEntry struct {
 	base   string
 	gender string
 	cCase  string
-	forms  [3]string
+	vacana string
+	form   string
 }
 
-var pronounMap = []pronounEntry{
-	{"tad", "masculine", "prathama", [3]string{"saH", "tO", "te"}},
-	{"tad", "masculine", "dvitiya", [3]string{"tam", "tO", "tAn"}},
-	{"tad", "masculine", "caturthi", [3]string{"tasmE", "tAByAm", "teByaH"}},
-	{"kim", "masculine", "prathama", [3]string{"kaH", "kO", "ke"}},
-	{"asmad", "any", "prathama", [3]string{"aham", "AvAm", "vayam"}},
-	{"yuzmad", "any", "prathama", [3]string{"tvam", "yuvAm", "yUyam"}},
+var pronounMap []pronounEntry
+
+func init() {
+	addP := func(b, g, c, eka, dvi, bahu string) {
+		pronounMap = append(pronounMap, pronounEntry{b, g, c, "eka", eka})
+		if dvi != "" {
+			pronounMap = append(pronounMap, pronounEntry{b, g, c, "dvi", dvi})
+		}
+		if bahu != "" {
+			pronounMap = append(pronounMap, pronounEntry{b, g, c, "bahu", bahu})
+		}
+	}
+
+	// TAD (Masculine)
+	addP("tad", "masculine", "prathama", "saH", "tO", "te")
+	addP("tad", "masculine", "dvitiya", "tam", "tO", "tAn")
+	addP("tad", "masculine", "tritiya", "tena", "tAByAm", "tEH")
+	addP("tad", "masculine", "caturthi", "tasmE", "tAByAm", "teByaH")
+	addP("tad", "masculine", "panchami", "tasmAt", "tAByAm", "teByaH")
+	addP("tad", "masculine", "sasthi", "tasya", "tayoH", "tezAm")
+	addP("tad", "masculine", "saptami", "tasmin", "tayoH", "tezu")
+
+	// TAD (Feminine)
+	addP("tad", "feminine", "prathama", "sA", "te", "tAH")
+	addP("tad", "feminine", "dvitiya", "tAm", "te", "tAH")
+	addP("tad", "feminine", "tritiya", "tayA", "tAByAm", "tABiH")
+	addP("tad", "feminine", "caturthi", "tasyE", "tAByAm", "tAByaH")
+	addP("tad", "feminine", "panchami", "tasyAH", "tAByAm", "tAByaH")
+	addP("tad", "feminine", "sasthi", "tasyAH", "tayoH", "tAsAm")
+	addP("tad", "feminine", "saptami", "tasyAm", "tayoH", "tAsu")
+
+	// TAD (Neuter)
+	addP("tad", "neuter", "prathama", "tat", "te", "tAni")
+	addP("tad", "neuter", "dvitiya", "tat", "te", "tAni")
+
+	// KIM (Masculine)
+	addP("kim", "masculine", "prathama", "kaH", "kO", "ke")
+	addP("kim", "masculine", "dvitiya", "kam", "kO", "kAn")
+	addP("kim", "masculine", "caturthi", "kasmE", "kAByAm", "keByaH")
+
+	// ASMAD (First Person)
+	addP("asmad", "any", "prathama", "aham", "AvAm", "vayam")
+	addP("asmad", "any", "dvitiya", "mAm", "AvAm", "asmAn")
+	addP("asmad", "any", "tritiya", "mayA", "AvAByAm", "asmAByiH")
+	addP("asmad", "any", "caturthi", "mahyam", "AvAByAm", "asmAByam")
+	addP("asmad", "any", "panchami", "mat", "AvAByAm", "asmat")
+	addP("asmad", "any", "sasthi", "mama", "AvayoH", "asmAkam")
+	addP("asmad", "any", "saptami", "mayi", "AvayoH", "asmAsu")
+
+	// YUZMAD (Second Person)
+	addP("yuzmad", "any", "prathama", "tvam", "yuvAm", "yUyam")
+	addP("yuzmad", "any", "dvitiya", "tvAm", "yuvAm", "yuzmAn")
+	addP("yuzmad", "any", "tritiya", "tvayA", "yuvAByAm", "yuzmABiH")
+	addP("yuzmad", "any", "caturthi", "tubhyam", "yuvAByAm", "yuzmAByam")
+	addP("yuzmad", "any", "panchami", "tvat", "yuvAByAm", "yuzmat")
+	addP("yuzmad", "any", "sasthi", "tava", "yuvayoH", "yuzmAkam")
+	addP("yuzmad", "any", "saptami", "tvayi", "yuvayoH", "yuzmAsu")
 }
 
-// AnalyzePronoun analyzes pronouns against the hardcoded pronoun map
 func AnalyzePronoun(db *sql.DB, word string) []map[string]any {
 	var results []map[string]any
-	vacanaList := []string{"eka", "dvi", "bahu"}
 
 	for _, entry := range pronounMap {
-		for i, form := range entry.forms {
-			if form == word {
-				results = append(results, map[string]any{
-					"type":      "pronoun",
-					"base_form": entry.base,
-					"gender":    entry.gender,
-					"case":      entry.cCase,
-					"vacana":    vacanaList[i],
-				})
-			}
+		if entry.form == word {
+			results = append(results, map[string]any{
+				"type":      "pronoun",
+				"base_form": entry.base,
+				"gender":    entry.gender,
+				"case":      entry.cCase,
+				"vacana":    entry.vacana,
+			})
 		}
 	}
 

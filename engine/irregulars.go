@@ -3,31 +3,42 @@ package engine
 import (
 	"database/sql"
 	"strings"
+	"sync"
 )
 
-var irregularCases = []string{
+type irregularEntry struct {
+	baseForm string
+	gender   string
+	cCase    string
+	vacana   string
+	form     string
+}
+
+var (
+	irregularCache []irregularEntry
+	irregularOnce  sync.Once
+)
+
+var irregularCasesList = []string{
 	"prathama", "dvitiya", "tritiya", "caturthi",
 	"panchami", "sasthi", "saptami", "sambodhana",
 }
 
-func AnalyzeIrregular(db *sql.DB, word string) []map[string]any {
-	var results []map[string]any
-
+func loadIrregulars(db *sql.DB) {
 	rows, err := db.Query("SELECT * FROM irregulars")
 	if err != nil {
-		return results
+		return
 	}
 	defer rows.Close()
 
 	cols, err := rows.Columns()
 	if err != nil {
-		return results
+		return
 	}
 
 	vacanaList := []string{"eka", "dvi", "bahu"}
 
 	for rows.Next() {
-		// Scan row into a dynamic map
 		columns := make([]any, len(cols))
 		columnPointers := make([]any, len(cols))
 		for i := range columns {
@@ -50,7 +61,7 @@ func AnalyzeIrregular(db *sql.DB, word string) []map[string]any {
 		baseForm := rowMap["base_form"]
 		gender := rowMap["gender"]
 
-		for _, caseName := range irregularCases {
+		for _, caseName := range irregularCasesList {
 			caseVal := rowMap[caseName]
 			if caseVal == "" {
 				continue
@@ -59,35 +70,37 @@ func AnalyzeIrregular(db *sql.DB, word string) []map[string]any {
 			forms := strings.Split(caseVal, ",")
 			for i, form := range forms {
 				form = strings.TrimSpace(form)
-				if form == word && form != "" && i < len(vacanaList) {
-					results = append(results, map[string]any{
-						"type":      "irregular_noun",
-						"base_form": baseForm,
-						"gender":    gender,
-						"case":      caseName,
-						"vacana":    vacanaList[i],
+				if form != "" && i < len(vacanaList) {
+					irregularCache = append(irregularCache, irregularEntry{
+						baseForm: baseForm,
+						gender:   gender,
+						cCase:    caseName,
+						vacana:   vacanaList[i],
+						form:     form,
 					})
 				}
 			}
 		}
 	}
-
-	return results
 }
 
-func declineIrregular(base string, gender string) (map[string][]string, bool) {
-	if base == "go" && (gender == "masculine" || gender == "feminine") {
-		return map[string][]string{
-			"prathama": {"gOH", "gAvO", "gAvaH"},
-			"dvitiya":  {"gAm", "gAvO", "gAH"},
-			"tritiya":  {"gavA", "goByAm", "goBiH"},
-		}, true
+func AnalyzeIrregular(db *sql.DB, word string) []map[string]any {
+	irregularOnce.Do(func() {
+		loadIrregulars(db)
+	})
+
+	var results []map[string]any
+	for _, entry := range irregularCache {
+		if entry.form == word {
+			results = append(results, map[string]any{
+				"type":      "irregular_noun",
+				"base_form": entry.baseForm,
+				"gender":    entry.gender,
+				"case":      entry.cCase,
+				"vacana":    entry.vacana,
+			})
+		}
 	}
-	if base == "strI" && gender == "feminine" {
-		return map[string][]string{
-			"prathama": {"strI", "striyO", "striyaH"},
-			"dvitiya":  {"striyam", "striyO", "striyaH"},
-		}, true
-	}
-	return nil, false
+
+	return results
 }

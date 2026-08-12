@@ -8,16 +8,18 @@ import (
 // SearchDhatu queries Dhatu information and participles matching a search query
 func SearchDhatu(db *sql.DB, query string) []map[string]any {
 	var results []map[string]any
-
 	searchTerm := fmt.Sprintf("%%%s%%", query)
 
 	sqlQuery := `
 		SELECT p.dhatu_id, p.pratyaya, p.base_form, p.upasarga,
-		       (SELECT value FROM info WHERE dhatu_id = p.dhatu_id AND key_name IN ('mUlaDAtuH', 'DAtuH') LIMIT 1) as root,
-		       (SELECT value FROM info WHERE dhatu_id = p.dhatu_id AND key_name IN ('aTfaH', 'meaning', 'eng', 'hin') LIMIT 1) as meaning,
-		       (SELECT value FROM info WHERE dhatu_id = p.dhatu_id AND key_name IN ('gaRaH', 'gana') LIMIT 1) as gana
+		       COALESCE(i1.value, '') as root,
+		       COALESCE(i2.value, '') as meaning,
+		       COALESCE(i3.value, '') as gana
 		FROM participles p
-		WHERE p.base_form LIKE ?1 OR root LIKE ?1 OR meaning LIKE ?1
+		LEFT JOIN info i1 ON i1.dhatu_id = p.dhatu_id AND i1.key_name IN ('mUlaDAtuH', 'DAtuH')
+		LEFT JOIN info i2 ON i2.dhatu_id = p.dhatu_id AND i2.key_name IN ('aTfaH', 'meaning', 'eng', 'hin')
+		LEFT JOIN info i3 ON i3.dhatu_id = p.dhatu_id AND i3.key_name IN ('gaRaH', 'gana')
+		WHERE p.base_form LIKE ?1 OR i1.value LIKE ?1 OR i2.value LIKE ?1
 		LIMIT 100
 	`
 

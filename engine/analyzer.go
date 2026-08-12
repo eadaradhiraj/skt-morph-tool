@@ -2,7 +2,6 @@ package engine
 
 import (
 	"database/sql"
-	"fmt"
 	"strings"
 )
 
@@ -42,12 +41,14 @@ func isValidParticiple(db *sql.DB, dhatuID, upasarga, pratyaya string) bool {
 
 func fetchVerbs(db *sql.DB, word string) []map[string]any {
 	var results []map[string]any
-	searchTerm := fmt.Sprintf("%%%s%%", word)
 
 	query := `SELECT dhatu_id, upasarga, derivative, prayoga, lakara, voice, purusha, eka, dvi, bahu 
-	          FROM conjugations WHERE eka LIKE ?1 OR dvi LIKE ?1 OR bahu LIKE ?1`
+	          FROM conjugations 
+	          WHERE eka = ?1 OR eka LIKE ?1 || ',%' OR eka LIKE '%,' || ?1 OR eka LIKE '%,' || ?1 || ',%'
+	             OR dvi = ?1 OR dvi LIKE ?1 || ',%' OR dvi LIKE '%,' || ?1 OR dvi LIKE '%,' || ?1 || ',%'
+	             OR bahu = ?1 OR bahu LIKE ?1 || ',%' OR bahu LIKE '%,' || ?1 OR bahu LIKE '%,' || ?1 || ',%'`
 
-	rows, err := db.Query(query, searchTerm)
+	rows, err := db.Query(query, word)
 	if err != nil {
 		return results
 	}
@@ -110,12 +111,15 @@ func analyzeVerb(db *sql.DB, word string) []map[string]any {
 
 func fetchParticiples(db *sql.DB, word string) []map[string]any {
 	var results []map[string]any
-	searchTerm := fmt.Sprintf("%%%s%%", word)
 
 	query := `SELECT dhatu_id, upasarga, derivative, pratyaya, base_form, masculine, feminine, neuter 
-	          FROM participles WHERE base_form LIKE ?1 OR masculine LIKE ?1 OR feminine LIKE ?1 OR neuter LIKE ?1`
+	          FROM participles 
+	          WHERE base_form = ?1 OR base_form LIKE ?1 || ',%' OR base_form LIKE '%,' || ?1 OR base_form LIKE '%,' || ?1 || ',%'
+	             OR masculine = ?1 OR masculine LIKE ?1 || ',%' OR masculine LIKE '%,' || ?1 OR masculine LIKE '%,' || ?1 || ',%'
+	             OR feminine = ?1 OR feminine LIKE ?1 || ',%' OR feminine LIKE '%,' || ?1 OR feminine LIKE '%,' || ?1 || ',%'
+	             OR neuter = ?1 OR neuter LIKE ?1 || ',%' OR neuter LIKE '%,' || ?1 OR neuter LIKE '%,' || ?1 || ',%'`
 
-	rows, err := db.Query(query, searchTerm)
+	rows, err := db.Query(query, word)
 	if err != nil {
 		return results
 	}
@@ -210,23 +214,20 @@ func analyzeDeclension(db *sql.DB, word string) []map[string]any {
 
 	for _, guess := range guessedStems {
 		stem := guess.Stem
-		searchTerm := fmt.Sprintf("%%%s%%", stem)
 
-		query := "SELECT dhatu_id, upasarga, pratyaya, base_form FROM participles WHERE base_form LIKE ?1"
-		rows, err := db.Query(query, searchTerm)
+		query := "SELECT dhatu_id, upasarga, pratyaya, base_form FROM participles WHERE base_form = ?1"
+		rows, err := db.Query(query, stem)
 
 		var exactMatches []map[string]string
 		if err == nil {
 			for rows.Next() {
 				var dhatuID, upasarga, pratyaya, baseForm sql.NullString
 				if err := rows.Scan(&dhatuID, &upasarga, &pratyaya, &baseForm); err == nil {
-					if exactMatch(baseForm.String, stem) {
-						exactMatches = append(exactMatches, map[string]string{
-							"dhatu_id": dhatuID.String,
-							"upasarga": upasarga.String,
-							"pratyaya": pratyaya.String,
-						})
-					}
+					exactMatches = append(exactMatches, map[string]string{
+						"dhatu_id": dhatuID.String,
+						"upasarga": upasarga.String,
+						"pratyaya": pratyaya.String,
+					})
 				}
 			}
 			rows.Close()
@@ -251,30 +252,27 @@ func analyzeDeclension(db *sql.DB, word string) []map[string]any {
 			foundDynamic := false
 			for _, split := range GetUpasargaSplits(stem) {
 				upa, strippedStem := split[0], split[1]
-				sTerm := fmt.Sprintf("%%%s%%", strippedStem)
 
-				dQuery := "SELECT dhatu_id, pratyaya, base_form FROM participles WHERE base_form LIKE ?1 AND upasarga = ''"
-				dRows, err := db.Query(dQuery, sTerm)
+				dQuery := "SELECT dhatu_id, pratyaya, base_form FROM participles WHERE base_form = ?1 AND upasarga = ''"
+				dRows, err := db.Query(dQuery, strippedStem)
 				if err == nil {
 					for dRows.Next() {
 						var dhatuID, pratyaya, baseForm sql.NullString
 						if err := dRows.Scan(&dhatuID, &pratyaya, &baseForm); err == nil {
-							if exactMatch(baseForm.String, strippedStem) {
-								r := map[string]any{
-									"type":      "declension",
-									"stem":      guess.Stem,
-									"gender":    guess.Gender,
-									"case":      guess.Case,
-									"vacana":    guess.Vacana,
-									"base_form": stem,
-									"dhatu_id":  dhatuID.String,
-									"upasarga":  upa,
-									"pratyaya":  pratyaya.String,
-									"note":      "Dynamic Upasarga Match",
-								}
-								results = append(results, r)
-								foundDynamic = true
+							r := map[string]any{
+								"type":      "declension",
+								"stem":      guess.Stem,
+								"gender":    guess.Gender,
+								"case":      guess.Case,
+								"vacana":    guess.Vacana,
+								"base_form": stem,
+								"dhatu_id":  dhatuID.String,
+								"upasarga":  upa,
+								"pratyaya":  pratyaya.String,
+								"note":      "Dynamic Upasarga Match",
 							}
+							results = append(results, r)
+							foundDynamic = true
 						}
 					}
 					dRows.Close()
@@ -303,8 +301,8 @@ func analyzeDeclension(db *sql.DB, word string) []map[string]any {
 	return results
 }
 
-// Analyze is the master orchestrator for morphological analysis of a Sanskrit word
 func Analyze(db *sql.DB, word string) map[string]any {
+	word = strings.TrimSpace(word)
 	verbs := analyzeVerb(db, word)
 	participles := analyzeParticiple(db, word)
 	declensions := analyzeDeclension(db, word)
