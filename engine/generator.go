@@ -13,13 +13,74 @@ func isASCIIDigit(s string) bool {
 	return unicode.IsDigit(rune(s[0]))
 }
 
+func normalizeGender(g string) string {
+	g = strings.ToLower(strings.TrimSpace(g))
+	switch g {
+	case "m", "masc", "masculine":
+		return "masculine"
+	case "f", "fem", "feminine":
+		return "feminine"
+	case "n", "neut", "neuter":
+		return "neuter"
+	default:
+		return g
+	}
+}
+
+func normalizePrayoga(p string) string {
+	p = strings.ToLower(strings.TrimSpace(p))
+	switch p {
+	case "kartari", "active":
+		return "Kartari"
+	case "karmani", "passive":
+		return "Karmani"
+	case "bhave", "impersonal":
+		return "Bhave"
+	default:
+		if p == "" {
+			return "Kartari"
+		}
+		return p
+	}
+}
+
+func normalizeVoice(v string) string {
+	v = strings.ToLower(strings.TrimSpace(v))
+	switch v {
+	case "parasmaipada", "parasmaipadam":
+		return "Parasmaipadam"
+	case "atmanepada", "atmanepadam":
+		return "Atmanepadam"
+	default:
+		return v
+	}
+}
+
+func normalizeDerivative(d string) string {
+	d = strings.TrimSpace(d)
+	if d == "" {
+		return "mUla"
+	}
+	return d
+}
+
+func cleanParticipleStem(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	parts := strings.Split(raw, ",")
+	first := strings.TrimSpace(parts[0])
+	return strings.TrimSuffix(first, "H")
+}
+
 func GenerateVerb(db *sql.DB, root, upasarga, lakara, purusha, voice, prayoga, derivative string) map[string]any {
-	if prayoga == "" {
-		prayoga = "Kartari"
-	}
-	if derivative == "" {
-		derivative = "mUla"
-	}
+	root = strings.TrimSpace(root)
+	upasarga = strings.TrimSpace(upasarga)
+	lakara = strings.TrimSpace(lakara)
+	purusha = strings.TrimSpace(purusha)
+	voice = normalizeVoice(voice)
+	prayoga = normalizePrayoga(prayoga)
+	derivative = normalizeDerivative(derivative)
 
 	isID := isASCIIDigit(root)
 
@@ -28,13 +89,13 @@ func GenerateVerb(db *sql.DB, root, upasarga, lakara, purusha, voice, prayoga, d
 		if voice != "" {
 			qExact = "SELECT eka, dvi, bahu FROM conjugations WHERE dhatu_id=?1 AND upasarga=?2 AND lakara=?3 AND purusha=?4 AND voice=?5 AND prayoga=?6 AND derivative=?7 LIMIT 1"
 		} else {
-			qExact = "SELECT eka, dvi, bahu FROM conjugations WHERE dhatu_id=?1 AND upasarga=?2 AND lakara=?3 AND purusha=?4 AND prayoga=?5 AND derivative=?6 LIMIT 1"
+			qExact = "SELECT eka, dvi, bahu FROM conjugations WHERE dhatu_id=?1 AND upasarga=?2 AND lakara=?3 AND purusha=?4 AND prayoga=?5 AND derivative=?6 ORDER BY CASE WHEN voice='Parasmaipadam' THEN 1 ELSE 2 END LIMIT 1"
 		}
 	} else {
 		if voice != "" {
-			qExact = "SELECT eka, dvi, bahu FROM conjugations WHERE dhatu_id IN (SELECT dhatu_id FROM info WHERE value=?1) AND upasarga=?2 AND lakara=?3 AND purusha=?4 AND voice=?5 AND prayoga=?6 AND derivative=?7 LIMIT 1"
+			qExact = "SELECT eka, dvi, bahu FROM conjugations WHERE dhatu_id IN (SELECT dhatu_id FROM info WHERE value=?1 OR value LIKE ?1 || '~%' OR value LIKE ?1 || '%') AND upasarga=?2 AND lakara=?3 AND purusha=?4 AND voice=?5 AND prayoga=?6 AND derivative=?7 LIMIT 1"
 		} else {
-			qExact = "SELECT eka, dvi, bahu FROM conjugations WHERE dhatu_id IN (SELECT dhatu_id FROM info WHERE value=?1) AND upasarga=?2 AND lakara=?3 AND purusha=?4 AND prayoga=?5 AND derivative=?6 LIMIT 1"
+			qExact = "SELECT eka, dvi, bahu FROM conjugations WHERE dhatu_id IN (SELECT dhatu_id FROM info WHERE value=?1 OR value LIKE ?1 || '~%' OR value LIKE ?1 || '%') AND upasarga=?2 AND lakara=?3 AND purusha=?4 AND prayoga=?5 AND derivative=?6 ORDER BY CASE WHEN voice='Parasmaipadam' THEN 1 ELSE 2 END LIMIT 1"
 		}
 	}
 
@@ -60,13 +121,13 @@ func GenerateVerb(db *sql.DB, root, upasarga, lakara, purusha, voice, prayoga, d
 			if voice != "" {
 				qDyn = "SELECT eka, dvi, bahu FROM conjugations WHERE dhatu_id=?1 AND upasarga='' AND lakara=?2 AND purusha=?3 AND voice=?4 AND prayoga=?5 AND derivative=?6 LIMIT 1"
 			} else {
-				qDyn = "SELECT eka, dvi, bahu FROM conjugations WHERE dhatu_id=?1 AND upasarga='' AND lakara=?2 AND purusha=?3 AND prayoga=?4 AND derivative=?5 LIMIT 1"
+				qDyn = "SELECT eka, dvi, bahu FROM conjugations WHERE dhatu_id=?1 AND upasarga='' AND lakara=?2 AND purusha=?3 AND prayoga=?4 AND derivative=?5 ORDER BY CASE WHEN voice='Parasmaipadam' THEN 1 ELSE 2 END LIMIT 1"
 			}
 		} else {
 			if voice != "" {
-				qDyn = "SELECT eka, dvi, bahu FROM conjugations WHERE dhatu_id IN (SELECT dhatu_id FROM info WHERE value=?1) AND upasarga='' AND lakara=?2 AND purusha=?3 AND voice=?4 AND prayoga=?5 AND derivative=?6 LIMIT 1"
+				qDyn = "SELECT eka, dvi, bahu FROM conjugations WHERE dhatu_id IN (SELECT dhatu_id FROM info WHERE value=?1 OR value LIKE ?1 || '~%' OR value LIKE ?1 || '%') AND upasarga='' AND lakara=?2 AND purusha=?3 AND voice=?4 AND prayoga=?5 AND derivative=?6 LIMIT 1"
 			} else {
-				qDyn = "SELECT eka, dvi, bahu FROM conjugations WHERE dhatu_id IN (SELECT dhatu_id FROM info WHERE value=?1) AND upasarga='' AND lakara=?2 AND purusha=?3 AND prayoga=?4 AND derivative=?5 LIMIT 1"
+				qDyn = "SELECT eka, dvi, bahu FROM conjugations WHERE dhatu_id IN (SELECT dhatu_id FROM info WHERE value=?1 OR value LIKE ?1 || '~%' OR value LIKE ?1 || '%') AND upasarga='' AND lakara=?2 AND purusha=?3 AND prayoga=?4 AND derivative=?5 ORDER BY CASE WHEN voice='Parasmaipadam' THEN 1 ELSE 2 END LIMIT 1"
 			}
 		}
 
@@ -95,16 +156,19 @@ func GenerateVerb(db *sql.DB, root, upasarga, lakara, purusha, voice, prayoga, d
 }
 
 func GenerateParticiple(db *sql.DB, root, upasarga, pratyaya, gender, derivative string) map[string]any {
-	if derivative == "" {
-		derivative = "mUla"
-	}
+	root = strings.TrimSpace(root)
+	upasarga = strings.TrimSpace(upasarga)
+	pratyaya = strings.TrimSpace(pratyaya)
+	gender = normalizeGender(gender)
+	derivative = normalizeDerivative(derivative)
+
 	isID := isASCIIDigit(root)
 
 	var qExact string
 	if isID {
 		qExact = "SELECT base_form, masculine, feminine, neuter FROM participles WHERE dhatu_id=?1 AND upasarga=?2 AND pratyaya=?3 AND derivative=?4 LIMIT 1"
 	} else {
-		qExact = "SELECT base_form, masculine, feminine, neuter FROM participles WHERE dhatu_id IN (SELECT dhatu_id FROM info WHERE value=?1) AND upasarga=?2 AND pratyaya=?3 AND derivative=?4 LIMIT 1"
+		qExact = "SELECT base_form, masculine, feminine, neuter FROM participles WHERE dhatu_id IN (SELECT dhatu_id FROM info WHERE value=?1 OR value LIKE ?1 || '~%' OR value LIKE ?1 || '%') AND upasarga=?2 AND pratyaya=?3 AND derivative=?4 LIMIT 1"
 	}
 
 	var baseForm, masc, fem, neut sql.NullString
@@ -119,7 +183,7 @@ func GenerateParticiple(db *sql.DB, root, upasarga, pratyaya, gender, derivative
 		if isID {
 			qDyn = "SELECT base_form, masculine, feminine, neuter FROM participles WHERE dhatu_id=?1 AND upasarga='' AND pratyaya=?2 AND derivative=?3 LIMIT 1"
 		} else {
-			qDyn = "SELECT base_form, masculine, feminine, neuter FROM participles WHERE dhatu_id IN (SELECT dhatu_id FROM info WHERE value=?1) AND upasarga='' AND pratyaya=?2 AND derivative=?3 LIMIT 1"
+			qDyn = "SELECT base_form, masculine, feminine, neuter FROM participles WHERE dhatu_id IN (SELECT dhatu_id FROM info WHERE value=?1 OR value LIKE ?1 || '~%' OR value LIKE ?1 || '%') AND upasarga='' AND pratyaya=?2 AND derivative=?3 LIMIT 1"
 		}
 
 		err := db.QueryRow(qDyn, root, pratyaya, derivative).Scan(&baseForm, &masc, &fem, &neut)
@@ -145,7 +209,7 @@ func GenerateParticiple(db *sql.DB, root, upasarga, pratyaya, gender, derivative
 		for _, av := range avyayas {
 			if pratyaya == av {
 				return map[string]any{
-					"base_form": baseForm.String,
+					"base_form": cleanParticipleStem(baseForm.String),
 					"type":      "avyaya",
 				}
 			}
@@ -153,16 +217,13 @@ func GenerateParticiple(db *sql.DB, root, upasarga, pratyaya, gender, derivative
 
 		var selectedBase string
 		if gender == "feminine" && fem.Valid && fem.String != "" {
-			selectedBase = strings.Split(fem.String, ",")[0]
-			selectedBase = strings.TrimSuffix(selectedBase, "H")
+			selectedBase = cleanParticipleStem(fem.String)
 		} else if gender == "neuter" && neut.Valid && neut.String != "" {
-			selectedBase = strings.Split(neut.String, ",")[0]
-			selectedBase = strings.TrimSuffix(selectedBase, "H")
+			selectedBase = cleanParticipleStem(neut.String)
 		} else if gender == "masculine" && masc.Valid && masc.String != "" {
-			selectedBase = strings.Split(masc.String, ",")[0]
-			selectedBase = strings.TrimSuffix(selectedBase, "H")
+			selectedBase = cleanParticipleStem(masc.String)
 		} else if baseForm.Valid {
-			selectedBase = strings.Split(baseForm.String, ",")[0]
+			selectedBase = cleanParticipleStem(baseForm.String)
 		}
 
 		declensions, err := DeclineNoun(selectedBase, gender)
@@ -181,6 +242,9 @@ func GenerateParticiple(db *sql.DB, root, upasarga, pratyaya, gender, derivative
 }
 
 func GenerateDeclension(base, gender string) map[string]any {
+	base = strings.TrimSpace(base)
+	gender = normalizeGender(gender)
+
 	declensions, err := DeclineNoun(base, gender)
 	if err != nil {
 		return map[string]any{"error": err.Error()}
