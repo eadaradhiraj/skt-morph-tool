@@ -6,6 +6,9 @@ import (
 )
 
 func exactMatch(rowVal, word string) bool {
+	if rowVal == "" || word == "" {
+		return false
+	}
 	parts := strings.Split(rowVal, ",")
 	for _, p := range parts {
 		if strings.TrimSpace(p) == word {
@@ -110,6 +113,10 @@ func fetchVerbs(db *sql.DB, word string) []map[string]any {
 			matchedVacanas = append(matchedVacanas, "bahu")
 		}
 
+		if len(matchedVacanas) == 0 {
+			continue
+		}
+
 		prefixedMeaning := fetchUpasargaMeaning(db, dhatuID.String, upasarga.String)
 		literaryExample := fetchLiteraryAttestation(db, dhatuID.String, word)
 
@@ -208,6 +215,10 @@ func fetchParticiples(db *sql.DB, word string) []map[string]any {
 			matchedCols = append(matchedCols, "neuter")
 		}
 
+		if len(matchedCols) == 0 {
+			continue
+		}
+
 		isAvyaya := false
 		for _, av := range avyayaPratyayas {
 			if pratyaya.String == av {
@@ -280,6 +291,7 @@ func analyzeParticiple(db *sql.DB, word string) []map[string]any {
 func analyzeDeclension(db *sql.DB, word string) []map[string]any {
 	guessedStems := GetStems(word)
 	var results []map[string]any
+	seen := make(map[string]bool)
 
 	for _, guess := range guessedStems {
 		stem := guess.Stem
@@ -292,11 +304,13 @@ func analyzeDeclension(db *sql.DB, word string) []map[string]any {
 			for rows.Next() {
 				var dhatuID, upasarga, pratyaya, baseForm sql.NullString
 				if err := rows.Scan(&dhatuID, &upasarga, &pratyaya, &baseForm); err == nil {
-					exactMatches = append(exactMatches, map[string]string{
-						"dhatu_id": dhatuID.String,
-						"upasarga": upasarga.String,
-						"pratyaya": pratyaya.String,
-					})
+					if exactMatch(baseForm.String, stem) {
+						exactMatches = append(exactMatches, map[string]string{
+							"dhatu_id": dhatuID.String,
+							"upasarga": upasarga.String,
+							"pratyaya": pratyaya.String,
+						})
+					}
 				}
 			}
 			rows.Close()
@@ -304,6 +318,12 @@ func analyzeDeclension(db *sql.DB, word string) []map[string]any {
 
 		if len(exactMatches) > 0 {
 			for _, m := range exactMatches {
+				key := stem + "|" + guess.Gender + "|" + guess.Case + "|" + guess.Vacana + "|" + m["dhatu_id"]
+				if seen[key] {
+					continue
+				}
+				seen[key] = true
+
 				pm := fetchUpasargaMeaning(db, m["dhatu_id"], m["upasarga"])
 				r := map[string]any{
 					"type":      "declension",
@@ -332,24 +352,32 @@ func analyzeDeclension(db *sql.DB, word string) []map[string]any {
 					for dRows.Next() {
 						var dhatuID, pratyaya, baseForm sql.NullString
 						if err := dRows.Scan(&dhatuID, &pratyaya, &baseForm); err == nil {
-							pm := fetchUpasargaMeaning(db, dhatuID.String, upa)
-							r := map[string]any{
-								"type":      "declension",
-								"stem":      guess.Stem,
-								"gender":    guess.Gender,
-								"case":      guess.Case,
-								"vacana":    guess.Vacana,
-								"base_form": stem,
-								"dhatu_id":  dhatuID.String,
-								"upasarga":  upa,
-								"pratyaya":  pratyaya.String,
-								"note":      "Dynamic Upasarga Match",
+							if exactMatch(baseForm.String, strippedStem) {
+								key := stem + "|" + guess.Gender + "|" + guess.Case + "|" + guess.Vacana + "|" + dhatuID.String
+								if seen[key] {
+									continue
+								}
+								seen[key] = true
+
+								pm := fetchUpasargaMeaning(db, dhatuID.String, upa)
+								r := map[string]any{
+									"type":      "declension",
+									"stem":      guess.Stem,
+									"gender":    guess.Gender,
+									"case":      guess.Case,
+									"vacana":    guess.Vacana,
+									"base_form": stem,
+									"dhatu_id":  dhatuID.String,
+									"upasarga":  upa,
+									"pratyaya":  pratyaya.String,
+									"note":      "Dynamic Upasarga Match",
+								}
+								if pm != "" {
+									r["prefixed_meaning"] = pm
+								}
+								results = append(results, r)
+								foundDynamic = true
 							}
-							if pm != "" {
-								r["prefixed_meaning"] = pm
-							}
-							results = append(results, r)
-							foundDynamic = true
 						}
 					}
 					dRows.Close()
@@ -357,21 +385,6 @@ func analyzeDeclension(db *sql.DB, word string) []map[string]any {
 				if foundDynamic {
 					break
 				}
-			}
-
-			if !foundDynamic {
-				r := map[string]any{
-					"type":      "declension",
-					"stem":      guess.Stem,
-					"gender":    guess.Gender,
-					"case":      guess.Case,
-					"vacana":    guess.Vacana,
-					"base_form": stem,
-					"dhatu_id":  nil,
-					"upasarga":  nil,
-					"pratyaya":  nil,
-				}
-				results = append(results, r)
 			}
 		}
 	}
