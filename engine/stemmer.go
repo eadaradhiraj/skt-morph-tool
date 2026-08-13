@@ -33,6 +33,30 @@ var stemmingRules []stemRule
 
 func init() {
 	stemmingRules = []stemRule{
+		// PRONOUN OBLIQUE CASES
+		rule(`tasmE$`, "tad", "masc/neut", "caturthi", "eka"),
+		rule(`tasmAt$`, "tad", "masc/neut", "panchami", "eka"),
+		rule(`tasmin$`, "tad", "masc/neut", "saptami", "eka"),
+		rule(`tasyE$`, "tad", "fem", "caturthi", "eka"),
+		rule(`tasyAH$`, "tad", "fem", "panchami/sasthi", "eka"),
+		rule(`tasyAm$`, "tad", "fem", "saptami", "eka"),
+
+		rule(`etasmE$`, "etad", "masc/neut", "caturthi", "eka"),
+		rule(`etasmAt$`, "etad", "masc/neut", "panchami", "eka"),
+		rule(`etasmin$`, "etad", "masc/neut", "saptami", "eka"),
+		rule(`etasyE$`, "etad", "fem", "caturthi", "eka"),
+		rule(`etasyAH$`, "etad", "fem", "panchami/sasthi", "eka"),
+		rule(`etasyAm$`, "etad", "fem", "saptami", "eka"),
+
+		rule(`kasmE$`, "kim", "masc/neut", "caturthi", "eka"),
+		rule(`kasmAt$`, "kim", "masc/neut", "panchami", "eka"),
+		rule(`kasmin$`, "kim", "masc/neut", "saptami", "eka"),
+
+		rule(`mahyam$`, "asmad", "any", "caturthi", "eka"),
+		rule(`asmAByam$`, "asmad", "any", "caturthi", "bahu"),
+		rule(`tubhyam$`, "yuzmad", "any", "caturthi", "eka"),
+		rule(`yuzmAByam$`, "yuzmad", "any", "caturthi", "bahu"),
+
 		// KINSHIP 'f' STEMS
 		rule(`pitarO$`, "pitf", "masc", "prathama/dvitiya", "dvi"),
 		rule(`pitaraH$`, "pitf", "masc", "prathama", "bahu"),
@@ -95,6 +119,19 @@ func init() {
 		rule(`sarvasmAt$`, "sarva", "masc/neut", "panchami", "eka"),
 		rule(`sarvezAm$`, "sarva", "masc/neut", "sasthi", "bahu"),
 		rule(`sarvasmin$`, "sarva", "masc/neut", "saptami", "eka"),
+
+		// OBLIQUE 'an' STEMS ('Atman', 'karman')
+		rule(`ane$`, "an", "masc/neut", "caturthi", "eka"),
+		rule(`anaH$`, "an", "masc/neut", "dvitiya/panchami/sasthi", "bahu/eka"),
+		rule(`anoH$`, "an", "masc/neut", "sasthi/saptami", "dvi"),
+
+		// OBLIQUE 'in' STEMS ('dhanin')
+		rule(`ine$`, "in", "masc/neut", "caturthi", "eka"),
+		rule(`inAm$`, "in", "masc/neut", "sasthi", "bahu"),
+
+		// OBLIQUE 'as' STEMS ('manas')
+		rule(`ase$`, "as", "neut", "caturthi", "eka"),
+		rule(`asaH$`, "as", "neut", "panchami/sasthi", "eka"),
 
 		// 'a' STEMS
 		rule(`aH$`, "a", "masc", "prathama", "eka"),

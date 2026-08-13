@@ -113,12 +113,23 @@ func GenerateParticiple(db *sql.DB, root, upasarga, pratyaya, gender, derivative
 			}
 		}
 
-		declensions, err := DeclineNoun(base, gender)
+		declensionBase := base
+		if gender == "feminine" {
+			if pratyaya == "Satf" && strings.HasSuffix(base, "at") {
+				declensionBase = base[:len(base)-2] + "antI"
+			} else if (pratyaya == "ktavatu" || pratyaya == "matup" || pratyaya == "vatup") && strings.HasSuffix(base, "at") {
+				declensionBase = base + "I"
+			} else if strings.HasSuffix(base, "a") {
+				declensionBase = base[:len(base)-1] + "A"
+			}
+		}
+
+		declensions, err := DeclineNoun(declensionBase, gender)
 		if err != nil {
 			return map[string]any{"error": err.Error()}
 		}
 		return map[string]any{
-			"base_form":   base,
+			"base_form":   declensionBase,
 			"declensions": declensions,
 		}
 	}

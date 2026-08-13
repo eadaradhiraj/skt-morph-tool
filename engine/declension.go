@@ -76,6 +76,17 @@ func buildGrid(pr, dv, tr, ca, pa, sa, sap, sam [3]string) map[string][]string {
 	}
 }
 
+func hasConsonantCluster(s string) bool {
+	runes := []rune(s)
+	if len(runes) < 2 {
+		return false
+	}
+	vowels := "aAiIuUfFxXeEoO"
+	c1 := runes[len(runes)-1]
+	c2 := runes[len(runes)-2]
+	return !strings.ContainsRune(vowels, c1) && !strings.ContainsRune(vowels, c2)
+}
+
 func declineIrregular(base string, gender string) (map[string][]string, bool) {
 	if base == "go" && (gender == "masculine" || gender == "feminine") {
 		return buildGrid(
@@ -233,7 +244,106 @@ func declineIrregular(base string, gender string) (map[string][]string, bool) {
 			[3]string{"candramaH", "candramasO", "candramasaH"},
 		), true
 	}
-	if base == "sarva" && gender == "masculine" {
+
+	// PRONOUNS
+	if base == "tad" {
+		if gender == "feminine" {
+			return buildGrid(
+				[3]string{"sA", "te", "tAH"},
+				[3]string{"tAm", "te", "tAH"},
+				[3]string{"tayA", "tAByAm", "tABiH"},
+				[3]string{"tasyE", "tAByAm", "tAByaH"},
+				[3]string{"tasyAH", "tAByAm", "tAByaH"},
+				[3]string{"tasyAH", "tayoH", "tAsAm"},
+				[3]string{"tasyAm", "tayoH", "tAsu"},
+				[3]string{"sA", "te", "tAH"},
+			), true
+		} else if gender == "neuter" {
+			return buildGrid(
+				[3]string{"tat", "te", "tAni"},
+				[3]string{"tat", "te", "tAni"},
+				[3]string{"tena", "tAByAm", "tEH"},
+				[3]string{"tasmE", "tAByAm", "teByaH"},
+				[3]string{"tasmAt", "tAByAm", "teByaH"},
+				[3]string{"tasya", "tayoH", "tezAm"},
+				[3]string{"tasmin", "tayoH", "tezu"},
+				[3]string{"tat", "te", "tAni"},
+			), true
+		} else {
+			return buildGrid(
+				[3]string{"saH", "tO", "te"},
+				[3]string{"tam", "tO", "tAn"},
+				[3]string{"tena", "tAByAm", "tEH"},
+				[3]string{"tasmE", "tAByAm", "teByaH"},
+				[3]string{"tasmAt", "tAByAm", "teByaH"},
+				[3]string{"tasya", "tayoH", "tezAm"},
+				[3]string{"tasmin", "tayoH", "tezu"},
+				[3]string{"saH", "tO", "te"},
+			), true
+		}
+	}
+	if base == "etad" {
+		if gender == "feminine" {
+			return buildGrid(
+				[3]string{"eSA", "ete", "etAH"},
+				[3]string{"etAm", "ete", "etAH"},
+				[3]string{"etayA", "etAByAm", "etABiH"},
+				[3]string{"etasyE", "etAByAm", "etAByaH"},
+				[3]string{"etasyAH", "etAByAm", "etAByaH"},
+				[3]string{"etasyAH", "etayoH", "etAsAm"},
+				[3]string{"etasyAm", "etayoH", "etAsu"},
+				[3]string{"eSA", "ete", "etAH"},
+			), true
+		} else {
+			return buildGrid(
+				[3]string{"eSaH", "etO", "ete"},
+				[3]string{"etam", "etO", "etAn"},
+				[3]string{"etena", "etAByAm", "etEH"},
+				[3]string{"etasmE", "etAByAm", "eteByaH"},
+				[3]string{"etasmAt", "etAByAm", "eteByaH"},
+				[3]string{"etasya", "etayoH", "etezAm"},
+				[3]string{"etasmin", "etayoH", "etezu"},
+				[3]string{"eSaH", "etO", "ete"},
+			), true
+		}
+	}
+	if base == "kim" {
+		return buildGrid(
+			[3]string{"kaH", "kO", "ke"},
+			[3]string{"kam", "kO", "kAn"},
+			[3]string{"kena", "kAByAm", "kEH"},
+			[3]string{"kasmE", "kAByAm", "keByaH"},
+			[3]string{"kasmAt", "kAByAm", "keByaH"},
+			[3]string{"kasya", "kayoH", "kezAm"},
+			[3]string{"kasmin", "kayoH", "kezu"},
+			[3]string{"kaH", "kO", "ke"},
+		), true
+	}
+	if base == "asmad" {
+		return buildGrid(
+			[3]string{"aham", "AvAm", "vayam"},
+			[3]string{"mAm", "AvAm", "asmAn"},
+			[3]string{"mayA", "AvAByAm", "asmAByiH"},
+			[3]string{"mahyam", "AvAByAm", "asmAByam"},
+			[3]string{"mat", "AvAByAm", "asmat"},
+			[3]string{"mama", "AvayoH", "asmAkam"},
+			[3]string{"mayi", "AvayoH", "asmAsu"},
+			[3]string{"aham", "AvAm", "vayam"},
+		), true
+	}
+	if base == "yuzmad" {
+		return buildGrid(
+			[3]string{"tvam", "yuvAm", "yUyam"},
+			[3]string{"tvAm", "yuvAm", "yuzmAn"},
+			[3]string{"tvayA", "yuvAByAm", "yuzmABiH"},
+			[3]string{"tubhyam", "yuvAByAm", "yuzmAByam"},
+			[3]string{"tvat", "yuvAByAm", "yuzmat"},
+			[3]string{"tava", "yuvayoH", "yuzmAkam"},
+			[3]string{"tvayi", "yuvayoH", "yuzmAsu"},
+			[3]string{"tvam", "yuvAm", "yUyam"},
+		), true
+	}
+	if base == "sarva" && (gender == "masculine" || gender == "") {
 		return buildGrid(
 			[3]string{"sarvaH", "sarvO", "sarve"},
 			[3]string{"sarvam", "sarvO", "sarvAn"},
@@ -245,6 +355,7 @@ func declineIrregular(base string, gender string) (map[string][]string, bool) {
 			[3]string{"sarva", "sarvO", "sarve"},
 		), true
 	}
+
 	return nil, false
 }
 
@@ -281,6 +392,8 @@ func DeclineNoun(base string, gender string) (map[string][]string, error) {
 				[3]string{s3 + "vati", s3 + "vatoH", s3 + "vatsu"},
 				[3]string{s3 + "van", s3 + "vantO", s3 + "vantaH"},
 			)
+		} else if gender == "feminine" {
+			return DeclineNoun(s3+"vatI", "feminine")
 		} else if gender == "neuter" {
 			res = buildGrid(
 				[3]string{s3 + "vat", s3 + "vatI", s3 + "vanti"},
@@ -306,6 +419,8 @@ func DeclineNoun(base string, gender string) (map[string][]string, error) {
 				[3]string{s3 + "mati", s3 + "matoH", s3 + "matsu"},
 				[3]string{s3 + "man", s3 + "mantO", s3 + "mantaH"},
 			)
+		} else if gender == "feminine" {
+			return DeclineNoun(s3+"matI", "feminine")
 		} else if gender == "neuter" {
 			res = buildGrid(
 				[3]string{s3 + "mat", s3 + "matI", s3 + "manti"},
@@ -331,6 +446,8 @@ func DeclineNoun(base string, gender string) (map[string][]string, error) {
 				[3]string{s2 + "ati", s2 + "atoH", s2 + "atsu"},
 				[3]string{s2 + "an", s2 + "antO", s2 + "antaH"},
 			)
+		} else if gender == "feminine" {
+			return DeclineNoun(s2+"antI", "feminine")
 		} else if gender == "neuter" {
 			res = buildGrid(
 				[3]string{s2 + "at", s2 + "atI", s2 + "anti"},
@@ -345,17 +462,32 @@ func DeclineNoun(base string, gender string) (map[string][]string, error) {
 		}
 	} else if strings.HasSuffix(base, "an") && len(base) >= 2 {
 		s2 := base[:len(base)-2]
+		isCluster := hasConsonantCluster(s2)
+
 		if gender == "masculine" {
-			res = buildGrid(
-				[3]string{s2 + "A", s2 + "AnO", s2 + "AnaH"},
-				[3]string{s2 + "Anam", s2 + "AnO", s2 + "naH"},
-				[3]string{s2 + "nA", s2 + "aByAm", s2 + "aBiH"},
-				[3]string{s2 + "ne", s2 + "aByAm", s2 + "aByaH"},
-				[3]string{s2 + "naH", s2 + "aByAm", s2 + "aByaH"},
-				[3]string{s2 + "naH", s2 + "noH", s2 + "nAm"},
-				[3]string{s2 + "ni", s2 + "noH", s2 + "asu"},
-				[3]string{s2 + "an", s2 + "AnO", s2 + "AnaH"},
-			)
+			if isCluster {
+				res = buildGrid(
+					[3]string{s2 + "A", s2 + "AnO", s2 + "AnaH"},
+					[3]string{s2 + "Anam", s2 + "AnO", s2 + "anaH"},
+					[3]string{s2 + "anA", s2 + "aByAm", s2 + "aBiH"},
+					[3]string{s2 + "ane", s2 + "aByAm", s2 + "aByaH"},
+					[3]string{s2 + "anaH", s2 + "aByAm", s2 + "aByaH"},
+					[3]string{s2 + "anaH", s2 + "anoH", s2 + "anAm"},
+					[3]string{s2 + "ani", s2 + "anoH", s2 + "asu"},
+					[3]string{s2 + "an", s2 + "AnO", s2 + "AnaH"},
+				)
+			} else {
+				res = buildGrid(
+					[3]string{s2 + "A", s2 + "AnO", s2 + "AnaH"},
+					[3]string{s2 + "Anam", s2 + "AnO", s2 + "naH"},
+					[3]string{s2 + "nA", s2 + "aByAm", s2 + "aBiH"},
+					[3]string{s2 + "ne", s2 + "aByAm", s2 + "aByaH"},
+					[3]string{s2 + "naH", s2 + "aByAm", s2 + "aByaH"},
+					[3]string{s2 + "naH", s2 + "noH", s2 + "nAm"},
+					[3]string{s2 + "ni / " + s2 + "ani", s2 + "noH", s2 + "asu"},
+					[3]string{s2 + "an", s2 + "AnO", s2 + "AnaH"},
+				)
+			}
 		} else if gender == "neuter" {
 			res = buildGrid(
 				[3]string{s2 + "a", s2 + "anI", s2 + "Ani"},
@@ -626,9 +758,9 @@ func DeclineNoun(base string, gender string) (map[string][]string, error) {
 			res = buildGrid(
 				[3]string{s + "UH", s + "vO", s + "vaH"},
 				[3]string{s + "Um", s + "vO", s + "UH"},
-				[3]string{s + "vA", s + "UByaM", s + "UBiH"},
-				[3]string{s + "vE", s + "UByaM", s + "UByaH"},
-				[3]string{s + "vAH", s + "UByaM", s + "UByaH"},
+				[3]string{s + "vA", s + "UByAm", s + "UBiH"},
+				[3]string{s + "vE", s + "UByAm", s + "UByaH"},
+				[3]string{s + "vAH", s + "UByAm", s + "UByaH"},
 				[3]string{s + "vAH", s + "voH", s + "UnAm"},
 				[3]string{s + "vAm", s + "voH", s + "Uzu"},
 				[3]string{s + "u", s + "vO", s + "vaH"},
