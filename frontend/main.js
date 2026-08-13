@@ -39,9 +39,14 @@ function out(text, col) {
     if (['Dhatu ID'].includes(col)) return text;
     if (/^[0-9.]+$/.test(text)) return text;
     
-    if (['Meaning'].includes(col) || /[\u0900-\u097F]/.test(text)) return text;
+    if (['Meaning', 'Prefixed Meaning'].includes(col) || /[\u0900-\u097F]/.test(text)) return text;
 
-    const rawTags = ['masc', 'fem', 'neut', 'eka', 'dvi', 'bahu', 'masc/fem', 'masc/neut', 'masc/fem/neut', 'any'];
+    const rawTags = [
+        'masc', 'fem', 'neut', 'masculine', 'feminine', 'neuter',
+        'eka', 'dvi', 'bahu', 'masc/fem', 'masc/neut', 'masc/fem/neut', 'any',
+        'prathama', 'dvitiya', 'tritiya', 'caturthi', 'panchami', 'sasthi', 'saptami', 'sambodhana',
+        'kartari', 'karmani', 'bhave', 'parasmaipadam', 'atmanepadam', 'mula', 'base'
+    ];
     return text.split(' ').map(w => rawTags.includes(w.toLowerCase()) ? w : Sanscript.t(w, 'slp1', outScript.value)).join(' ');
 }
 
@@ -52,7 +57,7 @@ function buildTable(title, cols, rows) {
     html += `</tr></thead><tbody>`;
     rows.forEach(r => {
         html += `<tr>`;
-        cols.forEach(c => html += `<td>${out(r[c.toLowerCase().replace(' ', '_')] || r[c] || '-', c)}</td>`);
+        cols.forEach(c => html += `<td>${out(r[c.toLowerCase().replace(/ /g, '_')] || r[c] || '-', c)}</td>`);
         html += `</tr>`;
     });
     return html + `</tbody></table>`;
@@ -93,9 +98,9 @@ async function runAnalyzer() {
     if (!data) return;
 
     let html = '';
-    html += buildTable('Verbs (Tiṅanta)', ['Dhatu ID', 'Upasarga', 'Lakara', 'Purusha', 'Vacana', 'Voice'], data.verbs);
-    html += buildTable('Declensions (Subanta)', ['Base Form', 'Dhatu ID', 'Upasarga', 'Pratyaya', 'Gender', 'Case', 'Vacana'], data.declensions);
-    html += buildTable('Participles / Avyayas', ['Base Form', 'Pratyaya', 'Dhatu ID', 'Upasarga'], data.participles);
+    html += buildTable('Verbs (Tiṅanta)', ['Dhatu ID', 'Root', 'Meaning', 'Prefixed Meaning', 'Upasarga', 'Lakara', 'Purusha', 'Vacana', 'Voice'], data.verbs);
+    html += buildTable('Declensions (Subanta)', ['Base Form', 'Dhatu ID', 'Upasarga', 'Prefixed Meaning', 'Pratyaya', 'Gender', 'Case', 'Vacana'], data.declensions);
+    html += buildTable('Participles / Avyayas', ['Base Form', 'Pratyaya', 'Dhatu ID', 'Upasarga', 'Prefixed Meaning'], data.participles);
     html += buildTable('Pronouns', ['Base Form', 'Gender', 'Case', 'Vacana'], data.pronouns);
     html += buildTable('Numerals', ['Base Form', 'Gender', 'Case', 'Vacana'], data.numerals);
     html += buildTable('Irregular Nouns', ['Base Form', 'Gender', 'Case', 'Vacana'], data.irregulars);
@@ -116,7 +121,7 @@ async function runDhatuSearch() {
     const data = await fetchAPI(`/api/dhatus/${query}`);
     if (!data || data.length === 0) { container.innerHTML = `<div class='error-msg'>No Dhātus found matching "${rawWord}".</div>`; return; }
     
-    data.sort((a,b) => a.dhatu_id.localeCompare(b.dhatu_id));
+    data.sort((a,b) => (a.dhatu_id || '').localeCompare(b.dhatu_id || ''));
     container.innerHTML = buildTable('Dhātu Results', ['Dhatu ID', 'Root', 'Gana', 'Meaning', 'Upasarga', 'Pratyaya', 'Base Form'], data);
     jsonBtn.style.display = 'block';
 }
