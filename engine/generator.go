@@ -51,7 +51,7 @@ func normalizeVoice(v string) string {
 	if strings.Contains(vLower, "parasm") || strings.Contains(vLower, "active") {
 		return "Parasmaipadam"
 	}
-	if strings.Contains(vLower, "atman") || strings.Contains(vLower, "atman") {
+	if strings.Contains(vLower, "atman") {
 		return "Atmanepadam"
 	}
 	return v
@@ -68,11 +68,11 @@ func normalizeDerivative(d string) string {
 func normalizeLakara(l string) string {
 	l = strings.TrimSpace(l)
 	switch strings.ToLower(l) {
-	case "law", "lat", "lat", "lat", "laT":
+	case "law", "lat", "laT":
 		return "laT"
 	case "low", "lot", "loT":
 		return "loT"
-	case "lan", "lan", "laN":
+	case "lan", "laN":
 		return "laN"
 	case "vidilin", "vidhilin", "vidhiliN", "vidiliN":
 		return "vidhiliN"
@@ -82,11 +82,11 @@ func normalizeLakara(l string) string {
 		return "liT"
 	case "luw", "lut", "luT":
 		return "luT"
-	case "asirling", "asirlin", "asir-lin", "ASIrliN", "asirliN":
+	case "asirling", "asirliN", "asir-lin", "ASIrliN":
 		return "ASIrliN"
 	case "lun", "luN":
 		return "luN"
-	case "lrn", "lfwN", "lrN":
+	case "lrn", "lfwn", "lrN":
 		return "lrN"
 	default:
 		return l
@@ -111,9 +111,9 @@ func normalizePurusha(p string) string {
 func normalizePratyaya(pr string) string {
 	pr = strings.TrimSpace(pr)
 	switch strings.ToLower(pr) {
-	case "sotf", "satf", "satf", "Satf":
+	case "sotf", "satf", "Satf":
 		return "Satf"
-	case "sanac", "sanac", "SAnac":
+	case "sanac", "SAnac":
 		return "SAnac"
 	case "tfc", "trc":
 		return "trc"
