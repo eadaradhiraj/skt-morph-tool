@@ -33,6 +33,69 @@ var stemmingRules []stemRule
 
 func init() {
 	stemmingRules = []stemRule{
+		// KINSHIP 'f' STEMS
+		rule(`pitarO$`, "pitf", "masc", "prathama/dvitiya", "dvi"),
+		rule(`pitaraH$`, "pitf", "masc", "prathama", "bahu"),
+		rule(`pitaram$`, "pitf", "masc", "dvitiya", "eka"),
+		rule(`pitFn$`, "pitf", "masc", "dvitiya", "bahu"),
+		rule(`pitrA$`, "pitf", "masc", "tritiya", "eka"),
+		rule(`pitre$`, "pitf", "masc", "caturthi", "eka"),
+		rule(`pituH$`, "pitf", "masc", "panchami/sasthi", "eka"),
+		rule(`pitari$`, "pitf", "masc", "saptami", "eka"),
+
+		rule(`mAtarO$`, "mAtf", "fem", "prathama/dvitiya", "dvi"),
+		rule(`mAtaraH$`, "mAtf", "fem", "prathama", "bahu"),
+		rule(`mAtaram$`, "mAtf", "fem", "dvitiya", "eka"),
+		rule(`mAtFH$`, "mAtf", "fem", "dvitiya", "bahu"),
+		rule(`mAtrA$`, "mAtf", "fem", "tritiya", "eka"),
+		rule(`mAtre$`, "mAtf", "fem", "caturthi", "eka"),
+		rule(`mAtuH$`, "mAtf", "fem", "panchami/sasthi", "eka"),
+		rule(`mAtari$`, "mAtf", "fem", "saptami", "eka"),
+
+		// MONOSYLLABIC ROOT NOUNS ('dhI', 'BU', 'SrI')
+		rule(`dhiyO$`, "dhI", "fem", "prathama/dvitiya", "dvi"),
+		rule(`dhiyaH$`, "dhI", "fem", "prathama/dvitiya/panchami/sasthi", "bahu/eka"),
+		rule(`dhiyam$`, "dhI", "fem", "dvitiya", "eka"),
+		rule(`dhiyA$`, "dhI", "fem", "tritiya", "eka"),
+		rule(`dhiye$`, "dhI", "fem", "caturthi", "eka"),
+		rule(`dhiyi$`, "dhI", "fem", "saptami", "eka"),
+
+		rule(`BuvO$`, "BU", "fem", "prathama/dvitiya", "dvi"),
+		rule(`BuvaH$`, "BU", "fem", "prathama/dvitiya/panchami/sasthi", "bahu/eka"),
+		rule(`Buvam$`, "BU", "fem", "dvitiya", "eka"),
+		rule(`BuvA$`, "BU", "fem", "tritiya", "eka"),
+		rule(`Buve$`, "BU", "fem", "caturthi", "eka"),
+		rule(`Buvi$`, "BU", "fem", "saptami", "eka"),
+
+		rule(`SriyO$`, "SrI", "fem", "prathama/dvitiya", "dvi"),
+		rule(`SriyaH$`, "SrI", "fem", "prathama/dvitiya/panchami/sasthi", "bahu/eka"),
+		rule(`Sriyam$`, "SrI", "fem", "dvitiya", "eka"),
+		rule(`SriyA$`, "SrI", "fem", "tritiya", "eka"),
+		rule(`Sriye$`, "SrI", "fem", "caturthi", "eka"),
+		rule(`Sriyi$`, "SrI", "fem", "saptami", "eka"),
+
+		// MASCULINE 'as' & 'vas' STEMS
+		rule(`vidvAn$`, "vidvas", "masc", "prathama", "eka"),
+		rule(`vidvAMsO$`, "vidvas", "masc", "prathama/dvitiya", "dvi"),
+		rule(`vidvAMsaH$`, "vidvas", "masc", "prathama", "bahu"),
+		rule(`vidvAMsam$`, "vidvas", "masc", "dvitiya", "eka"),
+		rule(`viduzaH$`, "vidvas", "masc", "dvitiya/panchami/sasthi", "bahu/eka"),
+		rule(`viduzA$`, "vidvas", "masc", "tritiya", "eka"),
+		rule(`viduze$`, "vidvas", "masc", "caturthi", "eka"),
+		rule(`viduzi$`, "vidvas", "masc", "saptami", "eka"),
+
+		rule(`candramAH$`, "candramas", "masc", "prathama", "eka"),
+		rule(`candramasO$`, "candramas", "masc", "prathama/dvitiya", "dvi"),
+		rule(`candramasaH$`, "candramas", "masc", "prathama/dvitiya/panchami/sasthi", "bahu/eka"),
+		rule(`candramasam$`, "candramas", "masc", "dvitiya", "eka"),
+		rule(`candramasA$`, "candramas", "masc", "tritiya", "eka"),
+
+		// PRONOMINAL ADJECTIVES ('sarva')
+		rule(`sarvasmE$`, "sarva", "masc/neut", "caturthi", "eka"),
+		rule(`sarvasmAt$`, "sarva", "masc/neut", "panchami", "eka"),
+		rule(`sarvezAm$`, "sarva", "masc/neut", "sasthi", "bahu"),
+		rule(`sarvasmin$`, "sarva", "masc/neut", "saptami", "eka"),
+
 		// 'a' STEMS
 		rule(`aH$`, "a", "masc", "prathama", "eka"),
 		rule(`O$`, "a", "masc", "prathama/dvitiya", "dvi"),
@@ -91,7 +154,7 @@ func init() {
 		rule(`vAH$`, "U", "fem", "panchami/sasthi", "eka"),
 		rule(`vAm$`, "U", "fem", "saptami", "eka"),
 
-		// 'f' STEMS
+		// AGENT 'f' STEMS
 		rule(`tA$`, "tf", "masc/fem", "prathama", "eka"),
 		rule(`tArO$`, "tf", "masc/fem", "prathama/dvitiya", "dvi"),
 		rule(`tAraH$`, "tf", "masc/fem", "prathama", "bahu"),

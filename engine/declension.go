@@ -125,6 +125,126 @@ func declineIrregular(base string, gender string) (map[string][]string, bool) {
 			[3]string{"pate", "patI", "patayaH"},
 		), true
 	}
+	if base == "pitf" && gender == "masculine" {
+		return buildGrid(
+			[3]string{"pitA", "pitarO", "pitaraH"},
+			[3]string{"pitaram", "pitarO", "pitFn"},
+			[3]string{"pitrA", "pitfByAm", "pitfBiH"},
+			[3]string{"pitre", "pitfByAm", "pitfByaH"},
+			[3]string{"pituH", "pitfByAm", "pitfByaH"},
+			[3]string{"pituH", "pitroH", "pitFnAm"},
+			[3]string{"pitari", "pitroH", "pitfzu"},
+			[3]string{"pitaH", "pitarO", "pitaraH"},
+		), true
+	}
+	if base == "BAtf" && gender == "masculine" {
+		return buildGrid(
+			[3]string{"BAtA", "BAtarO", "BAtaraH"},
+			[3]string{"BAtaram", "BAtarO", "BAtFn"},
+			[3]string{"BAtrA", "BAtfByAm", "BAtfBiH"},
+			[3]string{"BAtre", "BAtfByAm", "BAtfByaH"},
+			[3]string{"BAtuH", "BAtfByAm", "BAtfByaH"},
+			[3]string{"BAtuH", "BAtroH", "BAtFnAm"},
+			[3]string{"BAtari", "BAtroH", "BAtfzu"},
+			[3]string{"BAtaH", "BAtarO", "BAtaraH"},
+		), true
+	}
+	if base == "mAtf" && gender == "feminine" {
+		return buildGrid(
+			[3]string{"mAtA", "mAtarO", "mAtaraH"},
+			[3]string{"mAtaram", "mAtarO", "mAtFH"},
+			[3]string{"mAtrA", "mAtfByAm", "mAtfBiH"},
+			[3]string{"mAtre", "mAtfByAm", "mAtfByaH"},
+			[3]string{"mAtuH", "mAtfByAm", "mAtfByaH"},
+			[3]string{"mAtuH", "mAtroH", "mAtFnAm"},
+			[3]string{"mAtari", "mAtroH", "mAtfzu"},
+			[3]string{"mAtaH", "mAtarO", "mAtaraH"},
+		), true
+	}
+	if base == "duhitf" && gender == "feminine" {
+		return buildGrid(
+			[3]string{"duhitA", "duhitarO", "duhhitaraH"},
+			[3]string{"duhitaram", "duhitarO", "duhitFH"},
+			[3]string{"duhitrA", "duhitfByAm", "duhitfBiH"},
+			[3]string{"duhitre", "duhitfByAm", "duhitfByaH"},
+			[3]string{"duhituH", "duhitfByAm", "duhitfByaH"},
+			[3]string{"duhituH", "duhitroH", "duhitFnAm"},
+			[3]string{"duhitari", "duhitroH", "duhitfzu"},
+			[3]string{"duhitaH", "duhitarO", "duhhitaraH"},
+		), true
+	}
+	if base == "dhI" && gender == "feminine" {
+		return buildGrid(
+			[3]string{"dhIH", "dhiyO", "dhiyaH"},
+			[3]string{"dhiyam", "dhiyO", "dhiyaH"},
+			[3]string{"dhiyA", "dhIByAm", "dhIBiH"},
+			[3]string{"dhiye / dhiyE", "dhIByAm", "dhIByaH"},
+			[3]string{"dhiyaH / dhiyAH", "dhIByAm", "dhIByaH"},
+			[3]string{"dhiyaH / dhiyAH", "dhiyoH", "dhiyAm / dhInAm"},
+			[3]string{"dhiyi / dhiyAm", "dhiyoH", "dhIzu"},
+			[3]string{"dhIH", "dhiyO", "dhiyaH"},
+		), true
+	}
+	if base == "BU" && gender == "feminine" {
+		return buildGrid(
+			[3]string{"BOH", "BuvO", "BuvaH"},
+			[3]string{"Buvam", "BuvO", "BuvaH"},
+			[3]string{"BuvA", "BUByAm", "BUBiH"},
+			[3]string{"Buve / BuvE", "BUByAm", "BUByaH"},
+			[3]string{"BuvaH / BuvAH", "BUByAm", "BUByaH"},
+			[3]string{"BuvaH / BuvAH", "BuvoH", "BuvAm / BUnAm"},
+			[3]string{"Buvi / BuvAm", "BuvoH", "BUzu"},
+			[3]string{"BUH", "BuvO", "BuvaH"},
+		), true
+	}
+	if base == "SrI" && gender == "feminine" {
+		return buildGrid(
+			[3]string{"SrIH", "SriyO", "SriyaH"},
+			[3]string{"Sriyam", "SriyO", "SriyaH"},
+			[3]string{"SriyA", "SrIByAm", "SrIBiH"},
+			[3]string{"Sriye / SriyE", "SrIByAm", "SrIByaH"},
+			[3]string{"SriyaH / SriyAH", "SrIByAm", "SrIByaH"},
+			[3]string{"SriyaH / SriyAH", "SriyoH", "SriyAm / SrInAm"},
+			[3]string{"Sriyi / SriyAm", "SriyoH", "SrIzu"},
+			[3]string{"SrIH", "SriyO", "SriyaH"},
+		), true
+	}
+	if base == "vidvas" {
+		return buildGrid(
+			[3]string{"vidvAn", "vidvAMsO", "vidvAMsaH"},
+			[3]string{"vidvAMsam", "vidvAMsO", "viduzaH"},
+			[3]string{"viduzA", "vidvadByAm", "vidvadBiH"},
+			[3]string{"viduze", "vidvadByAm", "vidvadByaH"},
+			[3]string{"viduzaH", "vidvadByAm", "vidvadByaH"},
+			[3]string{"viduzaH", "viduzoH", "viduzAm"},
+			[3]string{"viduzi", "viduzoH", "vidvatsu"},
+			[3]string{"vidvan", "vidvAMsO", "vidvAMsaH"},
+		), true
+	}
+	if base == "candramas" {
+		return buildGrid(
+			[3]string{"candramAH", "candramasO", "candramasaH"},
+			[3]string{"candramasam", "candramasO", "candramasaH"},
+			[3]string{"candramasA", "candramoByAm", "candramoBiH"},
+			[3]string{"candramase", "candramoByAm", "candramoByaH"},
+			[3]string{"candramasaH", "candramoByAm", "candramoByaH"},
+			[3]string{"candramasaH", "candramasoH", "candramasAm"},
+			[3]string{"candramasi", "candramasoH", "candramassu"},
+			[3]string{"candramaH", "candramasO", "candramasaH"},
+		), true
+	}
+	if base == "sarva" && gender == "masculine" {
+		return buildGrid(
+			[3]string{"sarvaH", "sarvO", "sarve"},
+			[3]string{"sarvam", "sarvO", "sarvAn"},
+			[3]string{"sarveRa", "sarvAByAm", "sarvEH"},
+			[3]string{"sarvasmE", "sarvAByAm", "sarveByaH"},
+			[3]string{"sarvasmAt", "sarvAByAm", "sarveByaH"},
+			[3]string{"sarvasya", "sarvayoH", "sarvezAm"},
+			[3]string{"sarvasmin", "sarvayoH", "sarvezu"},
+			[3]string{"sarva", "sarvO", "sarve"},
+		), true
+	}
 	return nil, false
 }
 
@@ -236,6 +356,17 @@ func DeclineNoun(base string, gender string) (map[string][]string, error) {
 				[3]string{s2 + "ni", s2 + "noH", s2 + "asu"},
 				[3]string{s2 + "an", s2 + "AnO", s2 + "AnaH"},
 			)
+		} else if gender == "neuter" {
+			res = buildGrid(
+				[3]string{s2 + "a", s2 + "anI", s2 + "Ani"},
+				[3]string{s2 + "a", s2 + "anI", s2 + "Ani"},
+				[3]string{s2 + "anA", s2 + "aByAm", s2 + "aBiH"},
+				[3]string{s2 + "ane", s2 + "aByAm", s2 + "aByaH"},
+				[3]string{s2 + "anaH", s2 + "aByAm", s2 + "aByaH"},
+				[3]string{s2 + "anaH", s2 + "anoH", s2 + "anAm"},
+				[3]string{s2 + "ani", s2 + "anoH", s2 + "asu"},
+				[3]string{s2 + "a", s2 + "anI", s2 + "Ani"},
+			)
 		}
 	} else if strings.HasSuffix(base, "in") && len(base) >= 2 {
 		s2 := base[:len(base)-2]
@@ -249,6 +380,17 @@ func DeclineNoun(base string, gender string) (map[string][]string, error) {
 				[3]string{s2 + "inaH", s2 + "inoH", s2 + "inAm"},
 				[3]string{s2 + "ini", s2 + "inoH", s2 + "izu"},
 				[3]string{s2 + "in", s2 + "inO", s2 + "inaH"},
+			)
+		} else if gender == "neuter" {
+			res = buildGrid(
+				[3]string{s2 + "i", s2 + "inI", s2 + "Ini"},
+				[3]string{s2 + "i", s2 + "inI", s2 + "Ini"},
+				[3]string{s2 + "inA", s2 + "iByAm", s2 + "iBiH"},
+				[3]string{s2 + "ine", s2 + "iByAm", s2 + "iByaH"},
+				[3]string{s2 + "inaH", s2 + "iByAm", s2 + "iByaH"},
+				[3]string{s2 + "inaH", s2 + "inoH", s2 + "inAm"},
+				[3]string{s2 + "ini", s2 + "inoH", s2 + "izu"},
+				[3]string{s2 + "i", s2 + "inI", s2 + "Ini"},
 			)
 		}
 	} else if strings.HasSuffix(base, "as") && len(base) >= 2 {
@@ -424,10 +566,10 @@ func DeclineNoun(base string, gender string) (map[string][]string, error) {
 				[3]string{s + "iH", s + "I", s + "ayaH"},
 				[3]string{s + "im", s + "I", s + "IH"},
 				[3]string{s + "yA", s + "iByAm", s + "iBiH"},
-				[3]string{s + "yE", s + "iByAm", s + "iByaH"},
-				[3]string{s + "yAH", s + "iByAm", s + "iByaH"},
-				[3]string{s + "yAH", s + "yoH", s + "InAm"},
-				[3]string{s + "yAm", s + "yoH", s + "izu"},
+				[3]string{s + "aye / " + s + "yE", s + "iByAm", s + "iByaH"},
+				[3]string{s + "eH / " + s + "yAH", s + "iByAm", s + "iByaH"},
+				[3]string{s + "eH / " + s + "yAH", s + "yoH", s + "InAm"},
+				[3]string{s + "O / " + s + "yAm", s + "yoH", s + "izu"},
 				[3]string{s + "e", s + "I", s + "ayaH"},
 			)
 		} else if gender == "neuter" {
@@ -460,10 +602,10 @@ func DeclineNoun(base string, gender string) (map[string][]string, error) {
 				[3]string{s + "uH", s + "U", s + "avaH"},
 				[3]string{s + "um", s + "U", s + "UH"},
 				[3]string{s + "vA", s + "uByAm", s + "uBiH"},
-				[3]string{s + "vE", s + "uByAm", s + "uByaH"},
-				[3]string{s + "vAH", s + "uByAm", s + "uByaH"},
-				[3]string{s + "vAH", s + "voH", s + "UnAm"},
-				[3]string{s + "vAm", s + "voH", s + "uzu"},
+				[3]string{s + "ave / " + s + "vE", s + "uByAm", s + "uByaH"},
+				[3]string{s + "oH / " + s + "vAH", s + "uByAm", s + "uByaH"},
+				[3]string{s + "oH / " + s + "vAH", s + "voH", s + "UnAm"},
+				[3]string{s + "O / " + s + "vAm", s + "voH", s + "uzu"},
 				[3]string{s + "o", s + "U", s + "avaH"},
 			)
 		} else if gender == "neuter" {
