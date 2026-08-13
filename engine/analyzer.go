@@ -42,11 +42,15 @@ func isValidParticiple(db *sql.DB, dhatuID, upasarga, pratyaya string) bool {
 func fetchVerbs(db *sql.DB, word string) []map[string]any {
 	var results []map[string]any
 
-	query := `SELECT dhatu_id, upasarga, derivative, prayoga, lakara, voice, purusha, eka, dvi, bahu 
-	          FROM conjugations 
-	          WHERE eka = ?1 OR eka LIKE ?1 || ',%' OR eka LIKE '%,' || ?1 OR eka LIKE '%,' || ?1 || ',%'
-	             OR dvi = ?1 OR dvi LIKE ?1 || ',%' OR dvi LIKE '%,' || ?1 OR dvi LIKE '%,' || ?1 || ',%'
-	             OR bahu = ?1 OR bahu LIKE ?1 || ',%' OR bahu LIKE '%,' || ?1 OR bahu LIKE '%,' || ?1 || ',%'`
+	query := `SELECT c.dhatu_id, c.upasarga, c.derivative, c.prayoga, c.lakara, c.voice, c.purusha, c.eka, c.dvi, c.bahu,
+	                 COALESCE(i1.value, '') as root,
+	                 COALESCE(i2.value, '') as meaning
+	          FROM conjugations c
+	          LEFT JOIN info i1 ON i1.dhatu_id = c.dhatu_id AND i1.key_name IN ('mUlaDAtuH', 'DAtuH')
+	          LEFT JOIN info i2 ON i2.dhatu_id = c.dhatu_id AND i2.key_name IN ('aTfaH', 'meaning', 'eng', 'hin')
+	          WHERE c.eka = ?1 OR c.eka LIKE ?1 || ',%' OR c.eka LIKE '%,' || ?1 OR c.eka LIKE '%,' || ?1 || ',%'
+	             OR c.dvi = ?1 OR c.dvi LIKE ?1 || ',%' OR c.dvi LIKE '%,' || ?1 OR c.dvi LIKE '%,' || ?1 || ',%'
+	             OR c.bahu = ?1 OR c.bahu LIKE ?1 || ',%' OR c.bahu LIKE '%,' || ?1 OR c.bahu LIKE '%,' || ?1 || ',%'`
 
 	rows, err := db.Query(query, word)
 	if err != nil {
@@ -55,8 +59,8 @@ func fetchVerbs(db *sql.DB, word string) []map[string]any {
 	defer rows.Close()
 
 	for rows.Next() {
-		var dhatuID, upasarga, derivative, prayoga, lakara, voice, purusha, eka, dvi, bahu sql.NullString
-		if err := rows.Scan(&dhatuID, &upasarga, &derivative, &prayoga, &lakara, &voice, &purusha, &eka, &dvi, &bahu); err != nil {
+		var dhatuID, upasarga, derivative, prayoga, lakara, voice, purusha, eka, dvi, bahu, root, meaning sql.NullString
+		if err := rows.Scan(&dhatuID, &upasarga, &derivative, &prayoga, &lakara, &voice, &purusha, &eka, &dvi, &bahu, &root, &meaning); err != nil {
 			continue
 		}
 
@@ -75,6 +79,8 @@ func fetchVerbs(db *sql.DB, word string) []map[string]any {
 			results = append(results, map[string]any{
 				"type":       "verb",
 				"dhatu_id":   dhatuID.String,
+				"root":       root.String,
+				"meaning":    meaning.String,
 				"upasarga":   upasarga.String,
 				"derivative": derivative.String,
 				"prayoga":    prayoga.String,

@@ -16,14 +16,30 @@ var upasargaPatterns []upasargaRule
 
 func init() {
 	upasargaPatterns = []upasargaRule{
+		// Complex multi-prefix rules
 		{pattern: regexp.MustCompile(`^samudA`), canonical: "sam + ud + AN", prepend: ""},
 		{pattern: regexp.MustCompile(`^sa[mMnYNR]u[dtcjNYRnl]A`), canonical: "sam + ud + AN", prepend: ""},
 		{pattern: regexp.MustCompile(`^sa[mMnYNR]u[dtcjNYRnl]`), canonical: "sam + ud", prepend: ""},
-		{pattern: regexp.MustCompile(`^vyA`), canonical: "vi + AN", prepend: ""},
+
+		// Past-tense (aT-Agama) Sandhi splits
 		{pattern: regexp.MustCompile(`^pratyA`), canonical: "prati + AN", prepend: ""},
-		{pattern: regexp.MustCompile(`^vy`), canonical: "vi", prepend: ""},
+		{pattern: regexp.MustCompile(`^pratyA`), canonical: "prati", prepend: "A"},
+		{pattern: regexp.MustCompile(`^praty`), canonical: "prati", prepend: "a"},
+		{pattern: regexp.MustCompile(`^vyA`), canonical: "vi + AN", prepend: ""},
+		{pattern: regexp.MustCompile(`^vy`), canonical: "vi", prepend: "a"},
+		{pattern: regexp.MustCompile(`^anv`), canonical: "anu", prepend: "a"},
+		{pattern: regexp.MustCompile(`^abhy`), canonical: "abhi", prepend: "a"},
+		{pattern: regexp.MustCompile(`^adhy`), canonical: "adhi", prepend: "a"},
+		{pattern: regexp.MustCompile(`^pary`), canonical: "pari", prepend: "a"},
+		{pattern: regexp.MustCompile(`^upy`), canonical: "upa", prepend: "a"},
+		{pattern: regexp.MustCompile(`^aty`), canonical: "ati", prepend: "a"},
+		{pattern: regexp.MustCompile(`^samag`), canonical: "sam", prepend: "ag"},
+		{pattern: regexp.MustCompile(`^sa[mMnYNR]a`), canonical: "sam", prepend: "a"},
+		{pattern: regexp.MustCompile(`^prA`), canonical: "pra", prepend: "a"},
+		{pattern: regexp.MustCompile(`^udag`), canonical: "ud", prepend: "ag"},
+
+		// Standard present/future/participle prefix rules
 		{pattern: regexp.MustCompile(`^vi`), canonical: "vi", prepend: ""},
-		{pattern: regexp.MustCompile(`^praty`), canonical: "prati", prepend: ""},
 		{pattern: regexp.MustCompile(`^prati`), canonical: "prati", prepend: ""},
 		{pattern: regexp.MustCompile(`^sa[mMnYNR]`), canonical: "sam", prepend: ""},
 		{pattern: regexp.MustCompile(`^sam`), canonical: "sam", prepend: ""},
@@ -35,13 +51,19 @@ func init() {
 // GetUpasargaSplits returns potential upasarga splits as pairs of [canonical, stripped_stem]
 func GetUpasargaSplits(word string) [][2]string {
 	var splits [][2]string
+	seen := make(map[string]bool)
+
 	for _, r := range upasargaPatterns {
 		loc := r.pattern.FindStringIndex(word)
 		if loc != nil {
 			endIdx := loc[1]
 			stripped := r.prepend + word[endIdx:]
 			if utf8.RuneCountInString(stripped) >= 2 {
-				splits = append(splits, [2]string{r.canonical, stripped})
+				key := r.canonical + "|" + stripped
+				if !seen[key] {
+					seen[key] = true
+					splits = append(splits, [2]string{r.canonical, stripped})
+				}
 			}
 		}
 	}
