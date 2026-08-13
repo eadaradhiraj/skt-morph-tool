@@ -39,6 +39,41 @@ func isValidParticiple(db *sql.DB, dhatuID, upasarga, pratyaya string) bool {
 	return true
 }
 
+func fetchUpasargaMeaning(db *sql.DB, dhatuID, upasarga string) string {
+	if upasarga == "" || dhatuID == "" {
+		return ""
+	}
+	var meaning sql.NullString
+	q := "SELECT meaning FROM upasarga_meanings WHERE dhatu_id = ?1 AND (upasarga_combination = ?2 OR upasarga_combination = REPLACE(?2, ' + ', '+') OR upasarga_combination = REPLACE(?2, '+', ' + ')) LIMIT 1"
+	err := db.QueryRow(q, dhatuID, upasarga).Scan(&meaning)
+	if err == nil && meaning.Valid && meaning.String != "" {
+		return meaning.String
+	}
+
+	q2 := "SELECT meaning FROM upasargachandrika WHERE dhatu_id = ?1 AND (upasarga_combination = ?2 OR upasarga_combination = REPLACE(?2, ' + ', '+') OR upasarga_combination = REPLACE(?2, '+', ' + ')) LIMIT 1"
+	err2 := db.QueryRow(q2, dhatuID, upasarga).Scan(&meaning)
+	if err2 == nil && meaning.Valid && meaning.String != "" {
+		return meaning.String
+	}
+	return ""
+}
+
+func fetchLiteraryAttestation(db *sql.DB, dhatuID, word string) map[string]string {
+	if word == "" || dhatuID == "" {
+		return nil
+	}
+	var book, text sql.NullString
+	q := "SELECT book, literature_text FROM prayoga WHERE dhatu_id = ?1 AND form = ?2 LIMIT 1"
+	err := db.QueryRow(q, dhatuID, word).Scan(&book, &text)
+	if err == nil && (book.Valid || text.Valid) {
+		return map[string]string{
+			"book": book.String,
+			"text": text.String,
+		}
+	}
+	return nil
+}
+
 func fetchVerbs(db *sql.DB, word string) []map[string]any {
 	var results []map[string]any
 
@@ -75,8 +110,11 @@ func fetchVerbs(db *sql.DB, word string) []map[string]any {
 			matchedVacanas = append(matchedVacanas, "bahu")
 		}
 
+		prefixedMeaning := fetchUpasargaMeaning(db, dhatuID.String, upasarga.String)
+		literaryExample := fetchLiteraryAttestation(db, dhatuID.String, word)
+
 		for _, vacana := range matchedVacanas {
-			results = append(results, map[string]any{
+			res := map[string]any{
 				"type":       "verb",
 				"dhatu_id":   dhatuID.String,
 				"root":       root.String,
@@ -88,7 +126,14 @@ func fetchVerbs(db *sql.DB, word string) []map[string]any {
 				"voice":      voice.String,
 				"purusha":    purusha.String,
 				"vacana":     vacana,
-			})
+			}
+			if prefixedMeaning != "" {
+				res["prefixed_meaning"] = prefixedMeaning
+			}
+			if literaryExample != nil {
+				res["literature_attestation"] = literaryExample
+			}
+			results = append(results, res)
 		}
 	}
 	return results
@@ -101,9 +146,15 @@ func analyzeVerb(db *sql.DB, word string) []map[string]any {
 			upa, stripped := split[0], split[1]
 			subResults := fetchVerbs(db, stripped)
 			for _, res := range subResults {
-				if res["upasarga"] == "" {
+				if res["upasarga"] == "" || res["upasarga"] == nil {
 					res["upasarga"] = upa
 					res["note"] = "Dynamically matched via Sandhi split"
+					if dhatuID, ok := res["dhatu_id"].(string); ok {
+						pm := fetchUpasargaMeaning(db, dhatuID, upa)
+						if pm != "" {
+							res["prefixed_meaning"] = pm
+						}
+					}
 					results = append(results, res)
 				}
 			}
@@ -170,6 +221,8 @@ func fetchParticiples(db *sql.DB, word string) []map[string]any {
 			pType = "avyaya"
 		}
 
+		prefixedMeaning := fetchUpasargaMeaning(db, dhatuID.String, upasarga.String)
+
 		for _, col := range matchedCols {
 			pJSON := map[string]any{
 				"type":       pType,
@@ -178,6 +231,10 @@ func fetchParticiples(db *sql.DB, word string) []map[string]any {
 				"derivative": derivative.String,
 				"pratyaya":   pratyaya.String,
 				"base_form":  baseForm.String,
+			}
+
+			if prefixedMeaning != "" {
+				pJSON["prefixed_meaning"] = prefixedMeaning
 			}
 
 			if col == "masculine" || col == "feminine" || col == "neuter" {
@@ -200,9 +257,15 @@ func analyzeParticiple(db *sql.DB, word string) []map[string]any {
 			upa, stripped := split[0], split[1]
 			subResults := fetchParticiples(db, stripped)
 			for _, res := range subResults {
-				if res["upasarga"] == "" {
+				if res["upasarga"] == "" || res["upasarga"] == nil {
 					res["upasarga"] = upa
 					res["note"] = "Dynamically matched via Sandhi split"
+					if dhatuID, ok := res["dhatu_id"].(string); ok {
+						pm := fetchUpasargaMeaning(db, dhatuID, upa)
+						if pm != "" {
+							res["prefixed_meaning"] = pm
+						}
+					}
 					results = append(results, res)
 				}
 			}
@@ -241,6 +304,7 @@ func analyzeDeclension(db *sql.DB, word string) []map[string]any {
 
 		if len(exactMatches) > 0 {
 			for _, m := range exactMatches {
+				pm := fetchUpasargaMeaning(db, m["dhatu_id"], m["upasarga"])
 				r := map[string]any{
 					"type":      "declension",
 					"stem":      guess.Stem,
@@ -251,6 +315,9 @@ func analyzeDeclension(db *sql.DB, word string) []map[string]any {
 					"dhatu_id":  m["dhatu_id"],
 					"upasarga":  m["upasarga"],
 					"pratyaya":  m["pratyaya"],
+				}
+				if pm != "" {
+					r["prefixed_meaning"] = pm
 				}
 				results = append(results, r)
 			}
@@ -265,6 +332,7 @@ func analyzeDeclension(db *sql.DB, word string) []map[string]any {
 					for dRows.Next() {
 						var dhatuID, pratyaya, baseForm sql.NullString
 						if err := dRows.Scan(&dhatuID, &pratyaya, &baseForm); err == nil {
+							pm := fetchUpasargaMeaning(db, dhatuID.String, upa)
 							r := map[string]any{
 								"type":      "declension",
 								"stem":      guess.Stem,
@@ -276,6 +344,9 @@ func analyzeDeclension(db *sql.DB, word string) []map[string]any {
 								"upasarga":  upa,
 								"pratyaya":  pratyaya.String,
 								"note":      "Dynamic Upasarga Match",
+							}
+							if pm != "" {
+								r["prefixed_meaning"] = pm
 							}
 							results = append(results, r)
 							foundDynamic = true
