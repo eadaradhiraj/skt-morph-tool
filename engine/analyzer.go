@@ -342,10 +342,18 @@ func fetchParticiplesNew(db *sql.DB, word string) []map[string]any {
 		if derivative == "krut" || derivative == "krt" {
 			derivative = "base"
 		}
+		// fetch root/meaning for display
+		var rootVal, meaningVal sql.NullString
+		if hasTable(db, "dhatu_info") {
+			db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name IN ('OpadeSikasvarUpam','mUlaDAtuH','DAtuH','dhatu') LIMIT 1", dhatuID.String).Scan(&rootVal)
+			db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name IN ('arTaH','English Meaning','hindI arTa','english_meaning') LIMIT 1", dhatuID.String).Scan(&meaningVal)
+		}
 		for _, col := range matchedCols {
 			pJSON := map[string]any{
 				"type":       pType,
 				"dhatu_id":   dhatuID.String,
+				"root":       rootVal.String,
+				"meaning":    meaningVal.String,
 				"upasarga":   prefix.String,
 				"derivative": derivative,
 				"pratyaya":   variant.String,
@@ -430,11 +438,21 @@ func fetchParticiples(db *sql.DB, word string) []map[string]any {
 		}
 
 		prefixedMeaning := fetchUpasargaMeaning(db, dhatuID.String, upasarga.String)
+		var rootVal, meaningVal sql.NullString
+		if hasTable(db, "info") {
+			db.QueryRow("SELECT value FROM info WHERE dhatu_id=?1 AND key_name IN ('dhatu','OpadeSikasvarUpam','mUlaDAtuH','DAtuH') LIMIT 1", dhatuID.String).Scan(&rootVal)
+			db.QueryRow("SELECT value FROM info WHERE dhatu_id=?1 AND key_name IN ('arTaH','english_meaning','hindI_arTa','aTfaH','meaning','eng','hin') LIMIT 1", dhatuID.String).Scan(&meaningVal)
+		} else if hasTable(db, "dhatu_info") {
+			db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name IN ('OpadeSikasvarUpam','mUlaDAtuH','DAtuH','dhatu') LIMIT 1", dhatuID.String).Scan(&rootVal)
+			db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name IN ('arTaH','English Meaning','hindI arTa','english_meaning') LIMIT 1", dhatuID.String).Scan(&meaningVal)
+		}
 
 		for _, col := range matchedCols {
 			pJSON := map[string]any{
 				"type":       pType,
 				"dhatu_id":   dhatuID.String,
+				"root":       rootVal.String,
+				"meaning":    meaningVal.String,
 				"upasarga":   upasarga.String,
 				"derivative": derivative.String,
 				"pratyaya":   pratyaya.String,

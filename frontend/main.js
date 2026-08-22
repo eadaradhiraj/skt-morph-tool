@@ -42,10 +42,8 @@ function out(text, col) {
     if (['Meaning', 'Prefixed Meaning'].includes(col) || /[\u0900-\u097F]/.test(text)) return text;
 
     const rawTags = [
-        'masc', 'fem', 'neut', 'masculine', 'feminine', 'neuter',
-        'eka', 'dvi', 'bahu', 'masc/fem', 'masc/neut', 'masc/fem/neut', 'any',
-        'prathama', 'dvitiya', 'tritiya', 'caturthi', 'panchami', 'sasthi', 'saptami', 'sambodhana',
-        'kartari', 'karmani', 'bhave', 'parasmaipadam', 'atmanepadam', 'mula', 'base'
+        'masc/fem', 'masc/neut', 'masc/fem/neut', 'any',
+        'mula', 'base'
     ];
     return text.split(' ').map(w => rawTags.includes(w.toLowerCase()) ? w : Sanscript.t(w, 'slp1', outScript.value)).join(' ');
 }
@@ -100,7 +98,7 @@ async function runAnalyzer() {
     let html = '';
     html += buildTable('Verbs (Tiṅanta)', ['Dhatu ID', 'Root', 'Meaning', 'Prefixed Meaning', 'Upasarga', 'Lakara', 'Purusha', 'Vacana', 'Voice'], data.verbs);
     html += buildTable('Declensions (Subanta)', ['Base Form', 'Dhatu ID', 'Upasarga', 'Prefixed Meaning', 'Pratyaya', 'Gender', 'Case', 'Vacana'], data.declensions);
-    html += buildTable('Participles / Avyayas', ['Base Form', 'Pratyaya', 'Dhatu ID', 'Upasarga', 'Prefixed Meaning'], data.participles);
+    html += buildTable('Participles / Avyayas', ['Base Form', 'Root', 'Meaning', 'Pratyaya', 'Dhatu ID', 'Upasarga', 'Prefixed Meaning', 'Gender', 'Case', 'Vacana'], data.participles);
     html += buildTable('Pronouns', ['Base Form', 'Gender', 'Case', 'Vacana'], data.pronouns);
     html += buildTable('Numerals', ['Base Form', 'Gender', 'Case', 'Vacana'], data.numerals);
     html += buildTable('Irregular Nouns', ['Base Form', 'Gender', 'Case', 'Vacana'], data.irregulars);
