@@ -301,34 +301,14 @@ func fetchVerbs(db *sql.DB, word string) []map[string]any {
 
 func analyzeVerb(db *sql.DB, word string) []map[string]any {
 	results := fetchVerbs(db, word)
-	if len(results) == 0 {
-		for _, split := range GetUpasargaSplits(word) {
-			upa, stripped := split[0], split[1]
-			subResults := fetchVerbs(db, stripped)
-			for _, res := range subResults {
-				if res["upasarga"] == "" || res["upasarga"] == nil {
-					res["upasarga"] = upa
-					res["note"] = "Dynamically matched via Sandhi split"
-					if dhatuID, ok := res["dhatu_id"].(string); ok {
-						pm := fetchUpasargaMeaning(db, dhatuID, upa)
-						if pm != "" {
-							res["prefixed_meaning"] = pm
-						}
-					}
-					results = append(results, res)
-				}
-			}
-			if len(results) > 0 {
-				break
-			}
-		}
-	}
+	// exact match only — no dynamic upasarga sandhi fallback
 	return results
 }
 
 func fetchParticiplesNew(db *sql.DB, word string) []map[string]any {
 	var results []map[string]any
-	query := `SELECT dhatu_id, prefix, category, variant, base, m, f, n FROM participle_forms WHERE base = ?1 OR m = ?1 OR f = ?1 OR n = ?1`
+	// exact match only on base/m/f/n
+	query := `SELECT dhatu_id, prefix, category, variant, base, m, f, n FROM participle_forms WHERE base = ?1 OR m = ?1 OR f = ?1 OR n = ?1 LIMIT 10`
 	rows, err := db.Query(query, word)
 	if err != nil {
 		return results
@@ -509,28 +489,7 @@ func fetchParticiples(db *sql.DB, word string) []map[string]any {
 
 func analyzeParticiple(db *sql.DB, word string) []map[string]any {
 	results := fetchParticiples(db, word)
-	if len(results) == 0 {
-		for _, split := range GetUpasargaSplits(word) {
-			upa, stripped := split[0], split[1]
-			subResults := fetchParticiples(db, stripped)
-			for _, res := range subResults {
-				if res["upasarga"] == "" || res["upasarga"] == nil {
-					res["upasarga"] = upa
-					res["note"] = "Dynamically matched via Sandhi split"
-					if dhatuID, ok := res["dhatu_id"].(string); ok {
-						pm := fetchUpasargaMeaning(db, dhatuID, upa)
-						if pm != "" {
-							res["prefixed_meaning"] = pm
-						}
-					}
-					results = append(results, res)
-				}
-			}
-			if len(results) > 0 {
-				break
-			}
-		}
-	}
+	// exact match only — no dynamic upasarga sandhi fallback
 	return results
 }
 
