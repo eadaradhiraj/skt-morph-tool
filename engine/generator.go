@@ -259,21 +259,6 @@ func GenerateVerbNew(db *sql.DB, root, upasarga, lakara, purusha, voice, prayoga
 		rows.Scan(&fv)
 		forms = append(forms, fv.String)
 	}
-	if len(forms) == 0 && upasarga != "" {
-		// try without upasarga and sandhi fuse
-		rows2, err2 := db.Query("SELECT form_value FROM conjugation_forms WHERE dhatu_id=?1 AND prefix='' AND category=?2 AND form_type=?3 ORDER BY position", dhatuID, cat, ft)
-		if err2 == nil {
-			defer rows2.Close()
-			for rows2.Next() {
-				var fv sql.NullString
-				rows2.Scan(&fv)
-				forms = append(forms, ApplyUpasargaSandhi(upasarga, fv.String))
-			}
-			if len(forms) > 0 {
-				// mark sandhi
-			}
-		}
-	}
 	if len(forms) == 0 {
 		return map[string]any{"error": "Verb combination not found. Ensure root, Voice, and Prayoga are compatible."}
 	}
@@ -337,41 +322,6 @@ func GenerateVerb(db *sql.DB, root, upasarga, lakara, purusha, voice, prayoga, d
 		}
 	}
 
-	if upasarga != "" {
-		var qDyn string
-		if isID {
-			if voice != "" {
-				qDyn = "SELECT eka, dvi, bahu FROM conjugations WHERE dhatu_id=?1 AND upasarga='' AND (lakara=?2 OR lakara=REPLACE(?2,'T','w')) AND (purusha=?3 OR purusha='praTama' OR purusha='maDyama') AND voice=?4 AND prayoga=?5 AND (derivative=?6 OR derivative='base') LIMIT 1"
-			} else {
-				qDyn = "SELECT eka, dvi, bahu FROM conjugations WHERE dhatu_id=?1 AND upasarga='' AND (lakara=?2 OR lakara=REPLACE(?2,'T','w')) AND (purusha=?3 OR purusha='praTama' OR purusha='maDyama') AND prayoga=?4 AND (derivative=?5 OR derivative='base') ORDER BY CASE WHEN voice='Parasmaipadam' THEN 1 ELSE 2 END LIMIT 1"
-			}
-		} else {
-			if voice != "" {
-				qDyn = "SELECT eka, dvi, bahu FROM conjugations WHERE dhatu_id IN (SELECT dhatu_id FROM info WHERE value=?1 OR value LIKE ?1 || '~%' OR value LIKE ?1 || '%') AND upasarga='' AND (lakara=?2 OR lakara=REPLACE(?2,'T','w')) AND (purusha=?3 OR purusha='praTama' OR purusha='maDyama') AND voice=?4 AND prayoga=?5 AND (derivative=?6 OR derivative='base') LIMIT 1"
-			} else {
-				qDyn = "SELECT eka, dvi, bahu FROM conjugations WHERE dhatu_id IN (SELECT dhatu_id FROM info WHERE value=?1 OR value LIKE ?1 || '~%' OR value LIKE ?1 || '%') AND upasarga='' AND (lakara=?2 OR lakara=REPLACE(?2,'T','w')) AND (purusha=?3 OR purusha='praTama' OR purusha='maDyama') AND prayoga=?4 AND (derivative=?5 OR derivative='base') ORDER BY CASE WHEN voice='Parasmaipadam' THEN 1 ELSE 2 END LIMIT 1"
-			}
-		}
-
-		if voice != "" {
-			err = db.QueryRow(qDyn, root, lakara, purusha, voice, prayoga, derivative).Scan(&eka, &dvi, &bahu)
-		} else {
-			err = db.QueryRow(qDyn, root, lakara, purusha, prayoga, derivative).Scan(&eka, &dvi, &bahu)
-		}
-
-		if err == nil {
-			fEka := ApplyUpasargaSandhi(upasarga, eka.String)
-			fDvi := ApplyUpasargaSandhi(upasarga, dvi.String)
-			fBahu := ApplyUpasargaSandhi(upasarga, bahu.String)
-			return map[string]any{
-				"eka":  fEka,
-				"dvi":  fDvi,
-				"bahu": fBahu,
-				"note": "Dynamically Sandhi-fused",
-			}
-		}
-	}
-
 	return map[string]any{
 		"error": "Verb combination not found. Ensure root, Voice, and Prayoga are compatible.",
 	}
@@ -395,21 +345,10 @@ func GenerateParticipleNew(db *sql.DB, root, upasarga, pratyaya, gender, derivat
 	if cat == "mUla" || cat == "base" {
 		cat = "krut"
 	}
-	// try exact prefix
 	var baseForm, m, f, n sql.NullString
 	err := db.QueryRow("SELECT base, m, f, n FROM participle_forms WHERE dhatu_id=?1 AND prefix=?2 AND variant=?3 AND category=?4 LIMIT 1", dhatuID, upasarga, pratyaya, cat).Scan(&baseForm, &m, &f, &n)
 	if err != nil {
-		// try without prefix and sandhi
-		err2 := db.QueryRow("SELECT base, m, f, n FROM participle_forms WHERE dhatu_id=?1 AND prefix='' AND variant=?2 AND category=?3 LIMIT 1", dhatuID, pratyaya, cat).Scan(&baseForm, &m, &f, &n)
-		if err2 != nil {
-			return map[string]any{"error": "Participle combination not found."}
-		}
-		if upasarga != "" {
-			baseForm.String = ApplyUpasargaSandhi(upasarga, baseForm.String)
-			m.String = ApplyUpasargaSandhi(upasarga, m.String)
-			f.String = ApplyUpasargaSandhi(upasarga, f.String)
-			n.String = ApplyUpasargaSandhi(upasarga, n.String)
-		}
+		return map[string]any{"error": "Participle combination not found."}
 	}
 	avyayas := []string{"tumun", "ktvA", "lyap", "Ramul"}
 	for _, av := range avyayas {
@@ -461,35 +400,7 @@ func GenerateParticiple(db *sql.DB, root, upasarga, pratyaya, gender, derivative
 	var baseForm, masc, fem, neut sql.NullString
 	err := db.QueryRow(qExact, root, upasarga, pratyaya, derivative).Scan(&baseForm, &masc, &fem, &neut)
 
-	found := false
-
-	if err == nil {
-		found = true
-	} else if upasarga != "" {
-		var qDyn string
-		if isID {
-			qDyn = "SELECT base_form, masculine, feminine, neuter FROM participles WHERE dhatu_id=?1 AND upasarga='' AND (pratyaya=?2 OR pratyaya='Sotf' OR pratyaya='tfc') AND (derivative=?3 OR derivative='base') LIMIT 1"
-		} else {
-			qDyn = "SELECT base_form, masculine, feminine, neuter FROM participles WHERE dhatu_id IN (SELECT dhatu_id FROM info WHERE value=?1 OR value LIKE ?1 || '~%' OR value LIKE ?1 || '%') AND upasarga='' AND (pratyaya=?2 OR pratyaya='Sotf' OR pratyaya='tfc') AND (derivative=?3 OR derivative='base') LIMIT 1"
-		}
-
-		err := db.QueryRow(qDyn, root, pratyaya, derivative).Scan(&baseForm, &masc, &fem, &neut)
-		if err == nil {
-			found = true
-			if baseForm.Valid {
-				baseForm.String = ApplyUpasargaSandhi(upasarga, baseForm.String)
-			}
-			if fem.Valid {
-				fem.String = ApplyUpasargaSandhi(upasarga, fem.String)
-			}
-			if masc.Valid {
-				masc.String = ApplyUpasargaSandhi(upasarga, masc.String)
-			}
-			if neut.Valid {
-				neut.String = ApplyUpasargaSandhi(upasarga, neut.String)
-			}
-		}
-	}
+	found := err == nil
 
 	if found {
 		avyayas := []string{"tumun", "ktvA", "lyap", "Ramul"}
