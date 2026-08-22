@@ -54,14 +54,14 @@ func corsMiddleware() gin.HandlerFunc {
 }
 
 func main() {
-	db, err := sql.Open("sqlite", "data/skt_morphology.db?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)")
+	db, err := sql.Open("sqlite", "data/skt_morphology.db?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=cache_size(-8000)&_pragma=temp_store(MEMORY)&_pragma=mmap_size(0)")
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}
 	defer db.Close()
 
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(5)
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(2)
 
 	r := gin.Default()
 	r.Use(corsMiddleware())

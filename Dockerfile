@@ -23,6 +23,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o skt-morph-tool main.go
 # Stage 3: Create the lightweight production image
 FROM alpine:latest
 WORKDIR /app
+ENV GOMEMLIMIT=400MiB
+ENV GOGC=100
 
 # Install CA certificates, wget, python3 and sqlite to build the database from skt-morph-data
 RUN apk add --no-cache ca-certificates wget python3 sqlite

@@ -96,7 +96,7 @@ async function fetchAPI(url) {
         return data;
     } catch (err) {
         container.innerHTML = `<div class='error-msg'>Server Error: ${err.message}</div>`;
-        throw err;
+        return null;
     } finally { document.body.classList.remove('loading'); }
 }
 
