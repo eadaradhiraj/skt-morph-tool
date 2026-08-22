@@ -18,6 +18,24 @@ func exactMatch(rowVal, word string) bool {
 	return false
 }
 
+func cleanRoot(root string) string {
+	if root == "" {
+		return root
+	}
+	// strip anubandha markers like ~ and trailing capital anubandha (e.g. dfN -> df, BU stays BU)
+	root = strings.TrimSuffix(root, "~")
+	// common anubandha: trailing N, M, Y etc. Strip if root ends with single uppercase and length>2
+	// dfN -> df (N is anubandha), but keep BU (2 chars) as is
+	if len(root) > 2 && root[len(root)-1] >= 'A' && root[len(root)-1] <= 'Z' {
+		// check if previous char is not uppercase (avoid stripping BU where both are upper?)
+		prev := root[len(root)-2]
+		if !(prev >= 'A' && prev <= 'Z') {
+			return root[:len(root)-1]
+		}
+	}
+	return root
+}
+
 func hasTable(db *sql.DB, name string) bool {
 	var n string
 	err := db.QueryRow("SELECT name FROM sqlite_master WHERE type='table' AND name=?1", name).Scan(&n)
@@ -150,11 +168,12 @@ func fetchVerbsNew(db *sql.DB, word string) []map[string]any {
 		}
 		seenVerb[key] = true
 		var root, meaning sql.NullString
-		db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name IN ('OpadeSikasvarUpam','mUlaDAtuH','DAtuH','dhatu') LIMIT 1", dhatuID.String).Scan(&root)
-		db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name='arTaH' LIMIT 1", dhatuID.String).Scan(&meaning)
+		db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name IN ('English Meaning','hindI arTa') LIMIT 1", dhatuID.String).Scan(&meaning)
 		if !meaning.Valid || meaning.String == "" {
-			db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name IN ('English Meaning','hindI arTa') LIMIT 1", dhatuID.String).Scan(&meaning)
+			db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name='arTaH' LIMIT 1", dhatuID.String).Scan(&meaning)
 		}
+		db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name IN ('OpadeSikasvarUpam','mUlaDAtuH','DAtuH','dhatu') LIMIT 1", dhatuID.String).Scan(&root)
+		root.String = cleanRoot(root.String)
 		// derive lakara/voice from form_type
 		ft := formType.String
 		voice := "parasmEpadam"
@@ -237,15 +256,17 @@ func fetchVerbs(db *sql.DB, word string) []map[string]any {
 		var root, meaning sql.NullString
 		if hasTable(db, "info") {
 			db.QueryRow("SELECT value FROM info WHERE dhatu_id=?1 AND key_name IN ('dhatu','OpadeSikasvarUpam','mUlaDAtuH','DAtuH') LIMIT 1", dhatuID.String).Scan(&root)
-			db.QueryRow("SELECT value FROM info WHERE dhatu_id=?1 AND key_name='arTaH' LIMIT 1", dhatuID.String).Scan(&meaning)
+			root.String = cleanRoot(root.String)
+			db.QueryRow("SELECT value FROM info WHERE dhatu_id=?1 AND key_name IN ('english_meaning','hindI_arTa') LIMIT 1", dhatuID.String).Scan(&meaning)
 			if !meaning.Valid || meaning.String == "" {
-				db.QueryRow("SELECT value FROM info WHERE dhatu_id=?1 AND key_name IN ('english_meaning','hindI_arTa') LIMIT 1", dhatuID.String).Scan(&meaning)
+				db.QueryRow("SELECT value FROM info WHERE dhatu_id=?1 AND key_name='arTaH' LIMIT 1", dhatuID.String).Scan(&meaning)
 			}
 		} else if hasTable(db, "dhatu_info") {
 			db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name IN ('OpadeSikasvarUpam','mUlaDAtuH','DAtuH','dhatu') LIMIT 1", dhatuID.String).Scan(&root)
-			db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name='arTaH' LIMIT 1", dhatuID.String).Scan(&meaning)
+			root.String = cleanRoot(root.String)
+			db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name IN ('English Meaning','hindI arTa') LIMIT 1", dhatuID.String).Scan(&meaning)
 			if !meaning.Valid || meaning.String == "" {
-				db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name IN ('English Meaning','hindI arTa') LIMIT 1", dhatuID.String).Scan(&meaning)
+				db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name='arTaH' LIMIT 1", dhatuID.String).Scan(&meaning)
 			}
 		}
 
@@ -355,18 +376,17 @@ func fetchParticiplesNew(db *sql.DB, word string) []map[string]any {
 		if derivative == "krut" || derivative == "krt" {
 			derivative = "base"
 		}
-		// fetch root/meaning for display
-		var rootVal, meaningVal sql.NullString
+		// fetch root for display (clean anubandha), meaning removed for participles per request
+		var rootVal sql.NullString
 		if hasTable(db, "dhatu_info") {
 			db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name IN ('OpadeSikasvarUpam','mUlaDAtuH','DAtuH','dhatu') LIMIT 1", dhatuID.String).Scan(&rootVal)
-			db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name IN ('arTaH','English Meaning','hindI arTa','english_meaning') LIMIT 1", dhatuID.String).Scan(&meaningVal)
+			rootVal.String = cleanRoot(rootVal.String)
 		}
 		for _, col := range matchedCols {
 			pJSON := map[string]any{
 				"type":       pType,
 				"dhatu_id":   dhatuID.String,
 				"root":       rootVal.String,
-				"meaning":    meaningVal.String,
 				"upasarga":   prefix.String,
 				"derivative": derivative,
 				"pratyaya":   variant.String,
@@ -451,21 +471,19 @@ func fetchParticiples(db *sql.DB, word string) []map[string]any {
 		}
 
 		prefixedMeaning := fetchUpasargaMeaning(db, dhatuID.String, upasarga.String)
-		var rootVal, meaningVal sql.NullString
+		var rootVal sql.NullString
 		if hasTable(db, "info") {
 			db.QueryRow("SELECT value FROM info WHERE dhatu_id=?1 AND key_name IN ('dhatu','OpadeSikasvarUpam','mUlaDAtuH','DAtuH') LIMIT 1", dhatuID.String).Scan(&rootVal)
-			db.QueryRow("SELECT value FROM info WHERE dhatu_id=?1 AND key_name IN ('arTaH','english_meaning','hindI_arTa','aTfaH','meaning','eng','hin') LIMIT 1", dhatuID.String).Scan(&meaningVal)
 		} else if hasTable(db, "dhatu_info") {
 			db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name IN ('OpadeSikasvarUpam','mUlaDAtuH','DAtuH','dhatu') LIMIT 1", dhatuID.String).Scan(&rootVal)
-			db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name IN ('arTaH','English Meaning','hindI arTa','english_meaning') LIMIT 1", dhatuID.String).Scan(&meaningVal)
 		}
+		rootVal.String = cleanRoot(rootVal.String)
 
 		for _, col := range matchedCols {
 			pJSON := map[string]any{
 				"type":       pType,
 				"dhatu_id":   dhatuID.String,
 				"root":       rootVal.String,
-				"meaning":    meaningVal.String,
 				"upasarga":   upasarga.String,
 				"derivative": derivative.String,
 				"pratyaya":   pratyaya.String,

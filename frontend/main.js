@@ -98,7 +98,7 @@ async function runAnalyzer() {
     let html = '';
     html += buildTable('Verbs (Tiṅanta)', ['Dhatu ID', 'Root', 'Meaning', 'Prefixed Meaning', 'Upasarga', 'Lakara', 'Purusha', 'Vacana', 'Voice'], data.verbs);
     html += buildTable('Declensions (Subanta)', ['Base Form', 'Dhatu ID', 'Upasarga', 'Prefixed Meaning', 'Pratyaya', 'Gender', 'Case', 'Vacana'], data.declensions);
-    html += buildTable('Participles / Avyayas', ['Base Form', 'Root', 'Meaning', 'Pratyaya', 'Dhatu ID', 'Upasarga', 'Prefixed Meaning', 'Gender', 'Case', 'Vacana'], data.participles);
+    html += buildTable('Participles / Avyayas', ['Base Form', 'Root', 'Pratyaya', 'Dhatu ID', 'Upasarga', 'Prefixed Meaning', 'Gender', 'Case', 'Vacana'], data.participles);
     html += buildTable('Pronouns', ['Base Form', 'Gender', 'Case', 'Vacana'], data.pronouns);
     html += buildTable('Numerals', ['Base Form', 'Gender', 'Case', 'Vacana'], data.numerals);
     html += buildTable('Irregular Nouns', ['Base Form', 'Gender', 'Case', 'Vacana'], data.irregulars);
