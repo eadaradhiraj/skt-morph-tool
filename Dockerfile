@@ -24,8 +24,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o skt-morph-tool main.go
 FROM alpine:latest
 WORKDIR /app
 
-# Install CA certificates, wget and python3 to build the database from skt-morph-data
-RUN apk add --no-cache ca-certificates wget python3
+# Install CA certificates, wget, python3 and sqlite to build the database from skt-morph-data
+RUN apk add --no-cache ca-certificates wget python3 sqlite
 
 # Copy the compiled Go binary from Stage 2
 COPY --from=go-builder /app/skt-morph-tool /app/skt-morph-tool
@@ -38,6 +38,7 @@ RUN mkdir -p data && \
     wget -q -O /tmp/skt-morph-data.tar.gz "https://github.com/eadaradhiraj/skt-morph-data/archive/refs/tags/v0.1.0.tar.gz" && \
     tar -xzf /tmp/skt-morph-data.tar.gz -C /tmp && \
     python3 /tmp/skt-morph-data-0.1.0/scripts/json_to_sqlite.py --data-dir /tmp/skt-morph-data-0.1.0/data --output data/skt_morphology.db --force && \
+    sqlite3 data/skt_morphology.db "CREATE INDEX IF NOT EXISTS idx_conj_form_value ON conjugation_forms(form_value); CREATE INDEX IF NOT EXISTS idx_part_base ON participle_forms(base); CREATE INDEX IF NOT EXISTS idx_part_m ON participle_forms(m); CREATE INDEX IF NOT EXISTS idx_part_f ON participle_forms(f); CREATE INDEX IF NOT EXISTS idx_part_n ON participle_forms(n); VACUUM;" && \
     rm -rf /tmp/skt-morph-data.tar.gz /tmp/skt-morph-data-0.1.0
 
 EXPOSE 8000
