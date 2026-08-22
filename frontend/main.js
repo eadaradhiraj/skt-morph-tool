@@ -78,7 +78,20 @@ async function fetchAPI(url) {
     jsonBtn.style.display = 'none'; rawJson.style.display = 'none';
     try {
         const response = await fetch(url);
-        const data = await response.json();
+        const text = await response.text();
+        if (!response.ok) {
+            if (response.status === 503 || response.status === 429) {
+                throw new Error(`Server waking up (HTTP ${response.status}) — Render free tier hibernates after inactivity. Please wait 20s and retry.`);
+            }
+            throw new Error(`HTTP ${response.status}: ${text.slice(0,200) || response.statusText}`);
+        }
+        if (!text) {
+            throw new Error("Empty response from server — please retry (server may be waking up)");
+        }
+        let data;
+        try { data = JSON.parse(text); } catch (e) {
+            throw new Error(`Invalid JSON response: ${text.slice(0,200)}`);
+        }
         rawJson.innerText = JSON.stringify(data, null, 2);
         return data;
     } catch (err) {
