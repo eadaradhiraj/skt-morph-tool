@@ -131,7 +131,171 @@ func cleanParticipleStem(raw string) string {
 	return strings.TrimSuffix(first, "H")
 }
 
+func hasTableGen(db *sql.DB, name string) bool {
+	var n string
+	err := db.QueryRow("SELECT name FROM sqlite_master WHERE type='table' AND name=?1", name).Scan(&n)
+	return err == nil && n == name
+}
+
+func lakaraSuffix(lakara string) string {
+	switch strings.ToLower(lakara) {
+	case "lat", "law":
+		return "lat"
+	case "lan", "laN":
+		return "lang"
+	case "lit", "liw":
+		return "lit"
+	case "lot", "low":
+		return "lot"
+	case "lun", "luN":
+		return "lung"
+	case "lut", "luw":
+		return "lut"
+	case "lrt", "lfw", "lft":
+		return "lrut"
+	case "lrn", "lfn", "lrv":
+		return "lrung"
+	case "vidhilin", "vidhiliN":
+		return "vidhiling"
+	case "asirlin", "asirling", "asirliN", "ASIrliN":
+		return "ashirling"
+	default:
+		return strings.ToLower(lakara)
+	}
+}
+
+func formTypeFor(lakara, voice string) string {
+	suffix := lakaraSuffix(lakara)
+	if voice == "Atmanepadam" {
+		return "a" + suffix
+	}
+	return "p" + suffix
+}
+
+func ekaDviBahuFromForms(forms []string, purusha string) (string, string, string) {
+	n := len(forms)
+	if n == 0 {
+		return "", "", ""
+	}
+	p := strings.ToLower(purusha)
+	if p == "prathama" || p == "praTama" || p == "pratama" {
+		if n == 10 { // pashirling/vidhiling etc: eka has 2 forms
+			return forms[0] + ", " + forms[1], forms[2], forms[3]
+		}
+		if n == 13 { // lot
+			return forms[0] + ", " + forms[1] + ", " + forms[2], forms[3], forms[4]
+		}
+		if n >= 3 {
+			return forms[0], forms[1], forms[2]
+		}
+	} else if p == "madhyama" || p == "madyama" {
+		if n == 10 {
+			return forms[4], forms[5], forms[6]
+		}
+		if n == 13 {
+			return forms[5] + ", " + forms[6] + ", " + forms[7], forms[8], forms[9]
+		}
+		if n >= 6 {
+			return forms[3], forms[4], forms[5]
+		}
+	} else if p == "uttama" {
+		if n == 10 {
+			return forms[7], forms[8], forms[9]
+		}
+		if n == 13 {
+			return forms[10], forms[11], forms[12]
+		}
+		if n >= 9 {
+			return forms[6], forms[7], forms[8]
+		}
+	}
+	// fallback generic 9
+	if n >= 9 {
+		if p == "prathama" {
+			return forms[0], forms[1], forms[2]
+		}
+		if p == "madhyama" {
+			return forms[3], forms[4], forms[5]
+		}
+		return forms[6], forms[7], forms[8]
+	}
+	return forms[0], "", ""
+}
+
+func GenerateVerbNew(db *sql.DB, root, upasarga, lakara, purusha, voice, prayoga, derivative string) map[string]any {
+	// new schema: conjugation_forms
+	isID := isASCIIDigit(root)
+	var dhatuID string
+	if isID {
+		dhatuID = root
+	} else {
+		// lookup dhatu_id via dhatu_info value
+		err := db.QueryRow("SELECT dhatu_id FROM dhatu_info WHERE value=?1 LIMIT 1", root).Scan(&dhatuID)
+		if err != nil {
+			// try like
+			db.QueryRow("SELECT dhatu_id FROM dhatu_info WHERE value LIKE ?1 || '%' LIMIT 1", root).Scan(&dhatuID)
+		}
+		if dhatuID == "" {
+			return map[string]any{"error": "Verb combination not found. Ensure root, Voice, and Prayoga are compatible."}
+		}
+	}
+	// derivative: primary/base -> ting
+	cat := derivative
+	if cat == "mUla" || cat == "base" {
+		cat = "ting"
+	} else if cat == "" {
+		cat = "ting"
+	}
+	ft := formTypeFor(lakara, voice)
+	// query all forms for this combination ordered by position
+	rows, err := db.Query("SELECT form_value FROM conjugation_forms WHERE dhatu_id=?1 AND prefix=?2 AND category=?3 AND form_type=?4 ORDER BY position", dhatuID, upasarga, cat, ft)
+	if err != nil {
+		return map[string]any{"error": "Verb combination not found. Ensure root, Voice, and Prayoga are compatible."}
+	}
+	defer rows.Close()
+	var forms []string
+	for rows.Next() {
+		var fv sql.NullString
+		rows.Scan(&fv)
+		forms = append(forms, fv.String)
+	}
+	if len(forms) == 0 && upasarga != "" {
+		// try without upasarga and sandhi fuse
+		rows2, err2 := db.Query("SELECT form_value FROM conjugation_forms WHERE dhatu_id=?1 AND prefix='' AND category=?2 AND form_type=?3 ORDER BY position", dhatuID, cat, ft)
+		if err2 == nil {
+			defer rows2.Close()
+			for rows2.Next() {
+				var fv sql.NullString
+				rows2.Scan(&fv)
+				forms = append(forms, ApplyUpasargaSandhi(upasarga, fv.String))
+			}
+			if len(forms) > 0 {
+				// mark sandhi
+			}
+		}
+	}
+	if len(forms) == 0 {
+		return map[string]any{"error": "Verb combination not found. Ensure root, Voice, and Prayoga are compatible."}
+	}
+	eka, dvi, bahu := ekaDviBahuFromForms(forms, purusha)
+	if eka == "" && dvi == "" && bahu == "" {
+		return map[string]any{"error": "Verb combination not found. Ensure root, Voice, and Prayoga are compatible."}
+	}
+	return map[string]any{"eka": eka, "dvi": dvi, "bahu": bahu}
+}
+
 func GenerateVerb(db *sql.DB, root, upasarga, lakara, purusha, voice, prayoga, derivative string) map[string]any {
+	if hasTableGen(db, "conjugation_forms") && !hasTableGen(db, "conjugations") {
+		// normalize for new path as well
+		root = strings.TrimSpace(root)
+		upasarga = strings.TrimSpace(upasarga)
+		lakara = normalizeLakara(lakara)
+		purusha = normalizePurusha(purusha)
+		voice = normalizeVoice(voice)
+		prayoga = normalizePrayoga(prayoga)
+		derivative = normalizeDerivative(derivative)
+		return GenerateVerbNew(db, root, upasarga, lakara, purusha, voice, prayoga, derivative)
+	}
 	root = strings.TrimSpace(root)
 	upasarga = strings.TrimSpace(upasarga)
 	lakara = normalizeLakara(lakara)
@@ -213,7 +377,72 @@ func GenerateVerb(db *sql.DB, root, upasarga, lakara, purusha, voice, prayoga, d
 	}
 }
 
+func GenerateParticipleNew(db *sql.DB, root, upasarga, pratyaya, gender, derivative string) map[string]any {
+	isID := isASCIIDigit(root)
+	var dhatuID string
+	if isID {
+		dhatuID = root
+	} else {
+		db.QueryRow("SELECT dhatu_id FROM dhatu_info WHERE value=?1 LIMIT 1", root).Scan(&dhatuID)
+		if dhatuID == "" {
+			db.QueryRow("SELECT dhatu_id FROM dhatu_info WHERE value LIKE ?1 || '%' LIMIT 1", root).Scan(&dhatuID)
+		}
+		if dhatuID == "" {
+			return map[string]any{"error": "Participle combination not found."}
+		}
+	}
+	cat := derivative
+	if cat == "mUla" || cat == "base" {
+		cat = "krut"
+	}
+	// try exact prefix
+	var baseForm, m, f, n sql.NullString
+	err := db.QueryRow("SELECT base, m, f, n FROM participle_forms WHERE dhatu_id=?1 AND prefix=?2 AND variant=?3 AND category=?4 LIMIT 1", dhatuID, upasarga, pratyaya, cat).Scan(&baseForm, &m, &f, &n)
+	if err != nil {
+		// try without prefix and sandhi
+		err2 := db.QueryRow("SELECT base, m, f, n FROM participle_forms WHERE dhatu_id=?1 AND prefix='' AND variant=?2 AND category=?3 LIMIT 1", dhatuID, pratyaya, cat).Scan(&baseForm, &m, &f, &n)
+		if err2 != nil {
+			return map[string]any{"error": "Participle combination not found."}
+		}
+		if upasarga != "" {
+			baseForm.String = ApplyUpasargaSandhi(upasarga, baseForm.String)
+			m.String = ApplyUpasargaSandhi(upasarga, m.String)
+			f.String = ApplyUpasargaSandhi(upasarga, f.String)
+			n.String = ApplyUpasargaSandhi(upasarga, n.String)
+		}
+	}
+	avyayas := []string{"tumun", "ktvA", "lyap", "Ramul"}
+	for _, av := range avyayas {
+		if pratyaya == av {
+			return map[string]any{"base_form": cleanParticipleStem(baseForm.String), "type": "avyaya"}
+		}
+	}
+	var selectedBase string
+	if gender == "feminine" && f.Valid && f.String != "" {
+		selectedBase = cleanParticipleStem(f.String)
+	} else if gender == "neuter" && n.Valid && n.String != "" {
+		selectedBase = cleanParticipleStem(n.String)
+	} else if gender == "masculine" && m.Valid && m.String != "" {
+		selectedBase = cleanParticipleStem(m.String)
+	} else if baseForm.Valid {
+		selectedBase = cleanParticipleStem(baseForm.String)
+	}
+	declensions, err := DeclineNoun(selectedBase, gender)
+	if err != nil {
+		return map[string]any{"error": err.Error()}
+	}
+	return map[string]any{"base_form": selectedBase, "declensions": declensions}
+}
+
 func GenerateParticiple(db *sql.DB, root, upasarga, pratyaya, gender, derivative string) map[string]any {
+	if hasTableGen(db, "participle_forms") && !hasTableGen(db, "participles") {
+		root = strings.TrimSpace(root)
+		upasarga = strings.TrimSpace(upasarga)
+		pratyaya = normalizePratyaya(pratyaya)
+		gender = normalizeGender(gender)
+		derivative = normalizeDerivative(derivative)
+		return GenerateParticipleNew(db, root, upasarga, pratyaya, gender, derivative)
+	}
 	root = strings.TrimSpace(root)
 	upasarga = strings.TrimSpace(upasarga)
 	pratyaya = normalizePratyaya(pratyaya)
