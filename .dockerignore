@@ -1,0 +1,5 @@
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+.git
+frontend/node_modules
