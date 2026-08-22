@@ -132,22 +132,28 @@ func fetchLiteraryAttestation(db *sql.DB, dhatuID, word string) map[string]strin
 func fetchVerbsNew(db *sql.DB, word string) []map[string]any {
 	var results []map[string]any
 	// new schema: conjugation_forms
-	query := `SELECT cf.dhatu_id, cf.prefix, cf.category, cf.form_type, cf.form_value,
-	                 COALESCE(di1.value, '') as root,
-	                 COALESCE(di2.value, '') as meaning
-	          FROM conjugation_forms cf
-	          LEFT JOIN dhatu_info di1 ON di1.dhatu_id = cf.dhatu_id AND di1.name IN ('OpadeSikasvarUpam','mUlaDAtuH','DAtuH')
-	          LEFT JOIN dhatu_info di2 ON di2.dhatu_id = cf.dhatu_id AND di2.name IN ('arTaH','English Meaning','hindI arTa','aTfaH','meaning','eng','hin')
-	          WHERE cf.form_value = ?1`
+	query := `SELECT cf.dhatu_id, cf.prefix, cf.category, cf.form_type, cf.form_value FROM conjugation_forms cf WHERE cf.form_value = ?1`
 	rows, err := db.Query(query, word)
 	if err != nil {
 		return results
 	}
 	defer rows.Close()
+	seenVerb := make(map[string]bool)
 	for rows.Next() {
-		var dhatuID, prefix, category, formType, formValue, root, meaning sql.NullString
-		if err := rows.Scan(&dhatuID, &prefix, &category, &formType, &formValue, &root, &meaning); err != nil {
+		var dhatuID, prefix, category, formType, formValue sql.NullString
+		if err := rows.Scan(&dhatuID, &prefix, &category, &formType, &formValue); err != nil {
 			continue
+		}
+		key := dhatuID.String + "|" + prefix.String + "|" + formType.String
+		if seenVerb[key] {
+			continue
+		}
+		seenVerb[key] = true
+		var root, meaning sql.NullString
+		db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name IN ('OpadeSikasvarUpam','mUlaDAtuH','DAtuH','dhatu') LIMIT 1", dhatuID.String).Scan(&root)
+		db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name='arTaH' LIMIT 1", dhatuID.String).Scan(&meaning)
+		if !meaning.Valid || meaning.String == "" {
+			db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name IN ('English Meaning','hindI arTa') LIMIT 1", dhatuID.String).Scan(&meaning)
 		}
 		// derive lakara/voice from form_type
 		ft := formType.String
@@ -199,15 +205,7 @@ func fetchVerbs(db *sql.DB, word string) []map[string]any {
 	}
 	var results []map[string]any
 
-	query := `SELECT c.dhatu_id, c.upasarga, c.derivative, c.prayoga, c.lakara, c.voice, c.purusha, c.eka, c.dvi, c.bahu,
-	                 COALESCE(i1.value, '') as root,
-	                 COALESCE(i2.value, '') as meaning
-	          FROM conjugations c
-	          LEFT JOIN info i1 ON i1.dhatu_id = c.dhatu_id AND i1.key_name IN ('mUlaDAtuH', 'DAtuH')
-	          LEFT JOIN info i2 ON i2.dhatu_id = c.dhatu_id AND i2.key_name IN ('aTfaH', 'meaning', 'eng', 'hin')
-	          WHERE c.eka = ?1 OR c.eka LIKE ?1 || ',%' OR c.eka LIKE '%,' || ?1 OR c.eka LIKE '%,' || ?1 || ',%'
-	             OR c.dvi = ?1 OR c.dvi LIKE ?1 || ',%' OR c.dvi LIKE '%,' || ?1 OR c.dvi LIKE '%,' || ?1 || ',%'
-	             OR c.bahu = ?1 OR c.bahu LIKE ?1 || ',%' OR c.bahu LIKE '%,' || ?1 OR c.bahu LIKE '%,' || ?1 || ',%'`
+	query := `SELECT c.dhatu_id, c.upasarga, c.derivative, c.prayoga, c.lakara, c.voice, c.purusha, c.eka, c.dvi, c.bahu FROM conjugations c WHERE c.eka = ?1 OR c.eka LIKE ?1 || ',%' OR c.eka LIKE '%,' || ?1 OR c.eka LIKE '%,' || ?1 || ',%' OR c.dvi = ?1 OR c.dvi LIKE ?1 || ',%' OR c.dvi LIKE '%,' || ?1 OR c.dvi LIKE '%,' || ?1 || ',%' OR c.bahu = ?1 OR c.bahu LIKE ?1 || ',%' OR c.bahu LIKE '%,' || ?1 OR c.bahu LIKE '%,' || ?1 || ',%'`
 
 	rows, err := db.Query(query, word)
 	if err != nil {
@@ -216,8 +214,8 @@ func fetchVerbs(db *sql.DB, word string) []map[string]any {
 	defer rows.Close()
 
 	for rows.Next() {
-		var dhatuID, upasarga, derivative, prayoga, lakara, voice, purusha, eka, dvi, bahu, root, meaning sql.NullString
-		if err := rows.Scan(&dhatuID, &upasarga, &derivative, &prayoga, &lakara, &voice, &purusha, &eka, &dvi, &bahu, &root, &meaning); err != nil {
+		var dhatuID, upasarga, derivative, prayoga, lakara, voice, purusha, eka, dvi, bahu sql.NullString
+		if err := rows.Scan(&dhatuID, &upasarga, &derivative, &prayoga, &lakara, &voice, &purusha, &eka, &dvi, &bahu); err != nil {
 			continue
 		}
 
@@ -234,6 +232,21 @@ func fetchVerbs(db *sql.DB, word string) []map[string]any {
 
 		if len(matchedVacanas) == 0 {
 			continue
+		}
+
+		var root, meaning sql.NullString
+		if hasTable(db, "info") {
+			db.QueryRow("SELECT value FROM info WHERE dhatu_id=?1 AND key_name IN ('dhatu','OpadeSikasvarUpam','mUlaDAtuH','DAtuH') LIMIT 1", dhatuID.String).Scan(&root)
+			db.QueryRow("SELECT value FROM info WHERE dhatu_id=?1 AND key_name='arTaH' LIMIT 1", dhatuID.String).Scan(&meaning)
+			if !meaning.Valid || meaning.String == "" {
+				db.QueryRow("SELECT value FROM info WHERE dhatu_id=?1 AND key_name IN ('english_meaning','hindI_arTa') LIMIT 1", dhatuID.String).Scan(&meaning)
+			}
+		} else if hasTable(db, "dhatu_info") {
+			db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name IN ('OpadeSikasvarUpam','mUlaDAtuH','DAtuH','dhatu') LIMIT 1", dhatuID.String).Scan(&root)
+			db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name='arTaH' LIMIT 1", dhatuID.String).Scan(&meaning)
+			if !meaning.Valid || meaning.String == "" {
+				db.QueryRow("SELECT value FROM dhatu_info WHERE dhatu_id=?1 AND name IN ('English Meaning','hindI arTa') LIMIT 1", dhatuID.String).Scan(&meaning)
+			}
 		}
 
 		prefixedMeaning := fetchUpasargaMeaning(db, dhatuID.String, upasarga.String)
