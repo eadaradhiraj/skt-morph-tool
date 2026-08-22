@@ -24,8 +24,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o skt-morph-tool main.go
 FROM alpine:latest
 WORKDIR /app
 
-# Install CA certificates (for HTTPS requests) and 'wget' to download the database
-RUN apk add --no-cache ca-certificates wget
+# Install CA certificates, wget and python3 to build the database from skt-morph-data
+RUN apk add --no-cache ca-certificates wget python3
 
 # Copy the compiled Go binary from Stage 2
 COPY --from=go-builder /app/skt-morph-tool /app/skt-morph-tool
@@ -33,8 +33,12 @@ COPY --from=go-builder /app/skt-morph-tool /app/skt-morph-tool
 # Copy the compiled Frontend (Vite dist folder) from Stage 1
 COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 
-# CREATE data folder and DOWNLOAD the 543MB database directly from GitHub Releases
-RUN mkdir -p data && wget -q -O data/skt_morphology.db "https://github.com/eadaradhiraj/skt-morph-tool/releases/download/v1.0/skt_morphology.db"
+# DOWNLOAD skt-morph-data source archive and BUILD the SQLite database
+RUN mkdir -p data && \
+    wget -q -O /tmp/skt-morph-data.tar.gz "https://github.com/eadaradhiraj/skt-morph-data/archive/refs/tags/v0.1.0.tar.gz" && \
+    tar -xzf /tmp/skt-morph-data.tar.gz -C /tmp && \
+    python3 /tmp/skt-morph-data-0.1.0/scripts/json_to_sqlite.py --data-dir /tmp/skt-morph-data-0.1.0/data --output data/skt_morphology.db --force && \
+    rm -rf /tmp/skt-morph-data.tar.gz /tmp/skt-morph-data-0.1.0
 
 EXPOSE 8000
 CMD ["/app/skt-morph-tool"]
